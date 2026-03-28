@@ -1,0 +1,95 @@
+import { useCallback, useEffect, useState } from "react";
+import MapView from "./components/MapView";
+import Sidebar from "./components/Sidebar";
+import * as api from "./api";
+
+function ToastContainer({ toasts, dismiss }) {
+  return (
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          onClick={() => dismiss(t.id)}
+          className={`px-4 py-3 rounded-lg shadow-lg text-sm cursor-pointer transition-all animate-slide-in ${
+            t.type === "error"
+              ? "bg-red-600 text-white"
+              : "bg-gray-900 text-white"
+          }`}
+        >
+          {t.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function App() {
+  const [hospitals, setHospitals] = useState([]);
+  const [ambulances, setAmbulances] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [clickedLocation, setClickedLocation] = useState(null);
+  const [toasts, setToasts] = useState([]);
+
+  const toast = useCallback((message, type = "success") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [h, a, p] = await Promise.all([
+        api.getHospitals(),
+        api.getAmbulances(),
+        api.getPatients(),
+      ]);
+      setHospitals(h);
+      setAmbulances(a);
+      setPatients(p);
+    } catch (e) {
+      toast("Failed to fetch data: " + e.message, "error");
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return (
+    <div className="h-screen flex">
+      <Sidebar
+        hospitals={hospitals}
+        ambulances={ambulances}
+        patients={patients}
+        clickedLocation={clickedLocation}
+        onRefresh={refresh}
+        toast={toast}
+      />
+      <div className="flex-1 relative">
+        <MapView
+          hospitals={hospitals}
+          ambulances={ambulances}
+          onMapClick={setClickedLocation}
+          clickedLocation={clickedLocation}
+        />
+      </div>
+      <ToastContainer toasts={toasts} dismiss={dismissToast} />
+
+      <style>{`
+        @keyframes slide-in {
+          from { opacity: 0; transform: translateX(100px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+}
