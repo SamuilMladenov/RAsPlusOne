@@ -1,0 +1,38 @@
+name: rasplusone
+description: Mass Casualty Incident Triage System — START Protocol
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # UUID generation
+  uuid: ^4.4.0
+
+  # SVG body diagram
+  flutter_svg: ^2.0.10+1
+
+  # Google Fonts
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.9
+
+flutter:
+  uses-material-design: true
