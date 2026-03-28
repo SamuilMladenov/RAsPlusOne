@@ -117,7 +117,10 @@ class _BodyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BodyPainter old) =>
-      old.entries != entries || old.hoveredId != hoveredId;
+      old.entries.length != entries.length ||
+      old.hoveredId != hoveredId ||
+      old.entries.map((e) => e.zoneId + e.severity).join() !=
+          entries.map((e) => e.zoneId + e.severity).join();
 }
 
 
@@ -171,10 +174,12 @@ class _BodyDiagramState extends State<BodyDiagram> {
             entry,
           ];
           widget.onChange(updated);
+          setState(() {}); // repaint immediately
         },
         onClear: () {
           widget.onChange(
               widget.entries.where((e) => e.zoneId != zone.id).toList());
+          setState(() {}); // repaint immediately
         },
       ),
     );
