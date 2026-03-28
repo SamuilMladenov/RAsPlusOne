@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException
 
 from app import database as db
@@ -8,16 +10,16 @@ from app.schemas import (
     PatientResponse,
 )
 from app.services.distance import find_nearest_hospital_id
+from app.services.simulation import start_travel
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
 
 @router.post("/", response_model=PatientResponse, status_code=201)
 async def create_patient(body: PatientCreate):
-    if body.patient_id in db.patients:
-        raise HTTPException(409, f"Patient '{body.patient_id}' already exists")
-    patient = Patient(patient_id=body.patient_id)
-    db.patients[patient.patient_id] = patient
+    patient_id = f"P-{uuid.uuid4().hex[:6].upper()}"
+    patient = Patient(patient_id=patient_id, triage_status=body.triage_status)
+    db.patients[patient_id] = patient
     return patient
 
 
@@ -49,7 +51,7 @@ async def delete_patient(patient_id: str):
 @router.post("/{patient_id}/dispatch", response_model=DispatchResponse)
 async def dispatch_patient(patient_id: str):
     """Full dispatch: assign the patient to the nearest available ambulance,
-    then route that ambulance to the nearest hospital."""
+    route that ambulance to the nearest hospital, reserve beds, and start simulation."""
     patient = db.patients.get(patient_id)
     if not patient:
         raise HTTPException(404, "Patient not found")
@@ -72,7 +74,7 @@ async def dispatch_patient(patient_id: str):
     for amb in available:
         try:
             h_id, route = await find_nearest_hospital_id(
-                amb.location, db.hospitals
+                amb.location, db.hospitals, include_geometry=True
             )
         except Exception:
             continue
@@ -88,6 +90,17 @@ async def dispatch_patient(patient_id: str):
     best_amb.patient_ids.append(patient_id)
     best_amb.hospital_id = best_hospital_id
     best_amb.status = AmbulanceStatus.EN_ROUTE
+
+    hospital = db.hospitals.get(best_hospital_id)
+    if hospital:
+        if hospital.available_beds <= 0:
+            raise HTTPException(400, f"Hospital '{best_hospital_id}' has no available beds")
+        hospital.available_beds -= 1
+
+    if best_route.waypoints:
+        start_travel(best_amb.ambulance_id, best_amb, best_route.waypoints)
+    else:
+        best_amb.status = AmbulanceStatus.AT_HOSPITAL
 
     return DispatchResponse(
         patient_id=patient_id,

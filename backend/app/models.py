@@ -11,6 +11,19 @@ class Location(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
 
 
+class TriageStatus(str, Enum):
+    RED = "red"
+    YELLOW = "yellow"
+    GREEN = "green"
+
+
+TRIAGE_AMBULANCE_CAPACITY = {
+    TriageStatus.RED: 1,
+    TriageStatus.YELLOW: 3,
+    TriageStatus.GREEN: 5,
+}
+
+
 class AmbulanceStatus(str, Enum):
     AVAILABLE = "available"
     EN_ROUTE = "en_route"
@@ -23,6 +36,7 @@ class AmbulanceStatus(str, Enum):
 class Patient(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
+    triage_status: TriageStatus = TriageStatus.GREEN
 
 
 class Ambulance(BaseModel):
@@ -37,3 +51,5 @@ class Hospital(BaseModel):
     hospital_id: str
     location: Location
     doctors: list[str] = Field(default_factory=list)
+    available_beds: int = Field(default=0, ge=0)
+    patient_ids: list[str] = Field(default_factory=list)

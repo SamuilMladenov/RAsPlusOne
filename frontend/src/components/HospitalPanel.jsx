@@ -3,30 +3,30 @@ import * as api from "../api";
 
 export default function HospitalPanel({
   hospitals,
+  patients,
   clickedLocation,
   onRefresh,
   toast,
 }) {
-  const [id, setId] = useState("");
   const [doctors, setDoctors] = useState("");
+  const [beds, setBeds] = useState("10");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
-    if (!id.trim()) return toast("Enter a hospital ID", "error");
     if (!clickedLocation) return toast("Click the map to set a location", "error");
     setLoading(true);
     try {
-      await api.createHospital({
-        hospital_id: id.trim(),
+      const res = await api.createHospital({
         location: clickedLocation,
         doctors: doctors
           .split(",")
           .map((d) => d.trim())
           .filter(Boolean),
+        available_beds: parseInt(beds, 10) || 0,
       });
-      toast(`Hospital "${id.trim()}" created`);
-      setId("");
+      toast(`Hospital "${res.hospital_id}" created`);
       setDoctors("");
+      setBeds("10");
       onRefresh();
     } catch (e) {
       toast(e.message, "error");
@@ -52,15 +52,17 @@ export default function HospitalPanel({
         <h3 className="text-sm font-semibold text-gray-700">Add Hospital</h3>
         <input
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          placeholder="Hospital ID"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
-        <input
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           placeholder="Doctors (comma-separated)"
           value={doctors}
           onChange={(e) => setDoctors(e.target.value)}
+        />
+        <input
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          placeholder="Available beds"
+          type="number"
+          min="0"
+          value={beds}
+          onChange={(e) => setBeds(e.target.value)}
         />
         <p className="text-xs text-gray-400">
           📍 Click the map to pick a location
@@ -94,10 +96,29 @@ export default function HospitalPanel({
                 {h.location.latitude.toFixed(4)},{" "}
                 {h.location.longitude.toFixed(4)}
               </p>
+              <p className="text-xs mt-1">
+                <span className={`font-medium ${h.available_beds > 0 ? "text-green-600" : "text-red-500"}`}>
+                  🛏️ {h.available_beds} bed{h.available_beds !== 1 && "s"}
+                </span>
+              </p>
               {h.doctors.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-0.5">
                   👨‍⚕️ {h.doctors.join(", ")}
                 </p>
+              )}
+              {h.patient_ids.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {h.patient_ids.map((pid) => {
+                    const pt = patients.find((p) => p.patient_id === pid);
+                    const dotColor = pt?.triage_status === "red" ? "bg-red-500" : pt?.triage_status === "yellow" ? "bg-amber-500" : "bg-green-500";
+                    return (
+                      <span key={pid} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-[10px] text-gray-600">
+                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                        {pid}
+                      </span>
+                    );
+                  })}
+                </div>
               )}
             </div>
             <button

@@ -61,6 +61,16 @@ export default function App() {
     refresh();
   }, [refresh]);
 
+  // Auto-poll every second while any ambulance is actively travelling
+  useEffect(() => {
+    const hasMoving = ambulances.some(
+      (a) => a.status === "transporting" || a.status === "en_route",
+    );
+    if (!hasMoving) return;
+    const id = setInterval(refresh, 1000);
+    return () => clearInterval(id);
+  }, [ambulances, refresh]);
+
   return (
     <div className="h-screen flex">
       <Sidebar

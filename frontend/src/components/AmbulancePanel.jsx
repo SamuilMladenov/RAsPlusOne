@@ -17,22 +17,18 @@ export default function AmbulancePanel({
   onRefresh,
   toast,
 }) {
-  const [id, setId] = useState("");
   const [loading, setLoading] = useState(false);
   const [assigningHospital, setAssigningHospital] = useState(null);
 
   const handleCreate = async () => {
-    if (!id.trim()) return toast("Enter an ambulance ID", "error");
     if (!clickedLocation)
       return toast("Click the map to set a location", "error");
     setLoading(true);
     try {
-      await api.createAmbulance({
-        ambulance_id: id.trim(),
+      const res = await api.createAmbulance({
         location: clickedLocation,
       });
-      toast(`Ambulance "${id.trim()}" created`);
-      setId("");
+      toast(`Ambulance "${res.ambulance_id}" created`);
       onRefresh();
     } catch (e) {
       toast(e.message, "error");
@@ -83,12 +79,6 @@ export default function AmbulancePanel({
       {/* Create form */}
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
         <h3 className="text-sm font-semibold text-gray-700">Add Ambulance</h3>
-        <input
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          placeholder="Ambulance ID"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
         <p className="text-xs text-gray-400">
           📍 Click the map to pick a location
         </p>

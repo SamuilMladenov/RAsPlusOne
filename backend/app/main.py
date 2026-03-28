@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import ambulances, hospitals, patients
+from app.routers import ambulances, emergencies, hospitals, patients
 
 app = FastAPI(
     title="RAs+1 — Ambulance Dispatch System",
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(patients.router)
 app.include_router(ambulances.router)
 app.include_router(hospitals.router)
+app.include_router(emergencies.router)
 
 
 @app.get("/", tags=["Health"])

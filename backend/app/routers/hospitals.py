@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException
 
 from app import database as db
@@ -9,14 +11,14 @@ router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
 
 @router.post("/", response_model=HospitalResponse, status_code=201)
 async def create_hospital(body: HospitalCreate):
-    if body.hospital_id in db.hospitals:
-        raise HTTPException(409, f"Hospital '{body.hospital_id}' already exists")
+    hospital_id = f"H-{uuid.uuid4().hex[:6].upper()}"
     hospital = Hospital(
-        hospital_id=body.hospital_id,
+        hospital_id=hospital_id,
         location=body.location,
         doctors=body.doctors,
+        available_beds=body.available_beds,
     )
-    db.hospitals[hospital.hospital_id] = hospital
+    db.hospitals[hospital_id] = hospital
     return hospital
 
 
@@ -42,6 +44,8 @@ async def update_hospital(hospital_id: str, body: HospitalUpdate):
         hospital.location = body.location
     if body.doctors is not None:
         hospital.doctors = body.doctors
+    if body.available_beds is not None:
+        hospital.available_beds = body.available_beds
     return hospital
 
 

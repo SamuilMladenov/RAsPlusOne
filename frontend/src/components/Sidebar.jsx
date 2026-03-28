@@ -2,8 +2,10 @@ import { useState } from "react";
 import HospitalPanel from "./HospitalPanel";
 import AmbulancePanel from "./AmbulancePanel";
 import PatientPanel from "./PatientPanel";
+import EmergencyPanel from "./EmergencyPanel";
 
 const TABS = [
+  { key: "emergency", label: "Emergency", icon: "🚨" },
   { key: "hospitals", label: "Hospitals", icon: "🏥" },
   { key: "ambulances", label: "Ambulances", icon: "🚑" },
   { key: "patients", label: "Patients", icon: "🧑" },
@@ -17,7 +19,7 @@ export default function Sidebar({
   onRefresh,
   toast,
 }) {
-  const [activeTab, setActiveTab] = useState("hospitals");
+  const [activeTab, setActiveTab] = useState("emergency");
 
   return (
     <div className="w-[380px] h-full flex flex-col bg-white border-r border-gray-200 shadow-xl z-10">
@@ -63,9 +65,19 @@ export default function Sidebar({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto sidebar px-4 py-3">
+        {activeTab === "emergency" && (
+          <EmergencyPanel
+            clickedLocation={clickedLocation}
+            ambulances={ambulances}
+            hospitals={hospitals}
+            onRefresh={onRefresh}
+            toast={toast}
+          />
+        )}
         {activeTab === "hospitals" && (
           <HospitalPanel
             hospitals={hospitals}
+            patients={patients}
             clickedLocation={clickedLocation}
             onRefresh={onRefresh}
             toast={toast}

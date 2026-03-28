@@ -43,3 +43,7 @@ export const deletePatient = (id) =>
   request(`/patients/${id}`, { method: "DELETE" });
 export const dispatchPatient = (id) =>
   request(`/patients/${id}/dispatch`, { method: "POST" });
+
+// ── Emergencies ────────────────────────────────────────────────────
+export const createEmergency = (data) =>
+  request("/emergencies/", { method: "POST", body: JSON.stringify(data) });

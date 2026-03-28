@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException
 
 from app import database as db
@@ -9,20 +11,29 @@ from app.schemas import (
     AssignHospitalResponse,
 )
 from app.services.distance import find_nearest_hospital_id
+from app.services.simulation import cancel_travel, start_travel
 
 router = APIRouter(prefix="/ambulances", tags=["Ambulances"])
 
 
+def _reserve_bed(hospital_id: str):
+    """Reserve one bed at the hospital for this ambulance assignment."""
+    hospital = db.hospitals.get(hospital_id)
+    if not hospital:
+        return
+    if hospital.available_beds <= 0:
+        raise HTTPException(400, f"Hospital '{hospital_id}' has no available beds")
+    hospital.available_beds -= 1
+
+
 @router.post("/", response_model=AmbulanceResponse, status_code=201)
 async def create_ambulance(body: AmbulanceCreate):
-    if body.ambulance_id in db.ambulances:
-        raise HTTPException(409, f"Ambulance '{body.ambulance_id}' already exists")
+    ambulance_id = f"AMB-{uuid.uuid4().hex[:6].upper()}"
     ambulance = Ambulance(
-        ambulance_id=body.ambulance_id,
+        ambulance_id=ambulance_id,
         location=body.location,
-        status=body.status,
     )
-    db.ambulances[ambulance.ambulance_id] = ambulance
+    db.ambulances[ambulance_id] = ambulance
     return ambulance
 
 
@@ -55,6 +66,7 @@ async def update_ambulance(ambulance_id: str, body: AmbulanceUpdate):
 async def delete_ambulance(ambulance_id: str):
     if ambulance_id not in db.ambulances:
         raise HTTPException(404, "Ambulance not found")
+    cancel_travel(ambulance_id)
     del db.ambulances[ambulance_id]
 
 
@@ -90,7 +102,7 @@ async def assign_patient_to_ambulance(ambulance_id: str, patient_id: str):
     response_model=AssignHospitalResponse,
 )
 async def assign_nearest_hospital(ambulance_id: str):
-    """Find the nearest hospital by actual road distance and assign it."""
+    """Find the nearest hospital by road distance, reserve beds, and start travel simulation."""
     ambulance = db.ambulances.get(ambulance_id)
     if not ambulance:
         raise HTTPException(404, "Ambulance not found")
@@ -99,13 +111,21 @@ async def assign_nearest_hospital(ambulance_id: str):
 
     try:
         hospital_id, route = await find_nearest_hospital_id(
-            ambulance.location, db.hospitals
+            ambulance.location, db.hospitals, include_geometry=True
         )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
         raise HTTPException(502, f"Distance service error: {exc}") from exc
 
+    _reserve_bed(hospital_id)
     ambulance.hospital_id = hospital_id
-    ambulance.status = AmbulanceStatus.TRANSPORTING
+    ambulance.status = AmbulanceStatus.EN_ROUTE
+
+    if route.waypoints:
+        start_travel(ambulance_id, ambulance, route.waypoints)
+    else:
+        ambulance.status = AmbulanceStatus.AT_HOSPITAL
 
     return AssignHospitalResponse(
         ambulance_id=ambulance_id,

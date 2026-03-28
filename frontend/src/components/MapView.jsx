@@ -118,6 +118,14 @@ export default function MapView({
               <p className="text-gray-500">
                 {h.doctors.length} doctor{h.doctors.length !== 1 && "s"}
               </p>
+              <p className={`text-xs font-medium ${h.available_beds > 0 ? "text-green-600" : "text-red-500"}`}>
+                {h.available_beds} bed{h.available_beds !== 1 && "s"} available
+              </p>
+              {h.patient_ids.length > 0 && (
+                <p className="text-xs text-violet-600">
+                  {h.patient_ids.length} patient{h.patient_ids.length !== 1 && "s"} admitted
+                </p>
+              )}
               <p className="text-xs text-gray-400">
                 {h.location.latitude.toFixed(4)},{" "}
                 {h.location.longitude.toFixed(4)}
