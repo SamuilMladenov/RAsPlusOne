@@ -2,9 +2,17 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from enum import Enum
 
 from app.models import AmbulanceStatus, Location, TriageStatus
+
+
+class IncomingAmbulanceLeg(str, Enum):
+    TO_PATIENT = "to_patient"
+    AT_SCENE = "at_scene"
+    TO_HOSPITAL = "to_hospital"
 
 
 # ── Patient ──────────────────────────────────────────────────────────
@@ -45,12 +53,20 @@ class AmbulanceResponse(BaseModel):
 class HospitalCreate(BaseModel):
     location: Location
     doctors: list[str] = Field(default_factory=list)
+    total_beds: int = Field(default=10, ge=0)
     available_beds: int = Field(default=10, ge=0)
+
+    @model_validator(mode="after")
+    def total_covers_available(self) -> HospitalCreate:
+        if self.total_beds < self.available_beds:
+            self.total_beds = self.available_beds
+        return self
 
 
 class HospitalUpdate(BaseModel):
     location: Optional[Location] = None
     doctors: Optional[list[str]] = None
+    total_beds: Optional[int] = None
     available_beds: Optional[int] = None
 
 
@@ -58,8 +74,35 @@ class HospitalResponse(BaseModel):
     hospital_id: str
     location: Location
     doctors: list[str]
+    total_beds: int
     available_beds: int
     patient_ids: list[str]
+
+
+# ── Hospital dashboard (incoming ambulances) ─────────────────────────
+
+class IncomingPatientBrief(BaseModel):
+    """Per-patient row for incoming ambulances. Extend later with name, chief_complaint, etc."""
+
+    patient_id: str
+    triage_status: TriageStatus
+    location: Optional[Location] = None
+
+
+class IncomingAmbulanceItem(BaseModel):
+    ambulance_id: str
+    status: AmbulanceStatus
+    leg: IncomingAmbulanceLeg
+    eta_minutes_to_hospital: Optional[float] = None
+    distance_km_remaining: Optional[float] = None
+    eta_approximate: bool = False
+    patients: list[IncomingPatientBrief]
+    eta_unavailable_reason: Optional[str] = None
+
+
+class HospitalDashboardResponse(BaseModel):
+    hospital: HospitalResponse
+    incoming: list[IncomingAmbulanceItem]
 
 
 # ── Assignment ───────────────────────────────────────────────────────

@@ -61,7 +61,7 @@ export default function App() {
     refresh();
   }, [refresh]);
 
-  // Auto-poll every second while any ambulance is actively travelling
+  // Auto-poll while any ambulance is actively travelling (3s to reduce API load vs 1s)
   useEffect(() => {
     const hasMoving = ambulances.some(
       (a) =>
@@ -70,12 +70,12 @@ export default function App() {
         a.status === "at_scene",
     );
     if (!hasMoving) return;
-    const id = setInterval(refresh, 1000);
+    const id = setInterval(refresh, 3000);
     return () => clearInterval(id);
   }, [ambulances, refresh]);
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       <Sidebar
         hospitals={hospitals}
         ambulances={ambulances}

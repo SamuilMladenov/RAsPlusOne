@@ -15,6 +15,8 @@ async function request(path, opts = {}) {
 
 // ── Hospitals ──────────────────────────────────────────────────────
 export const getHospitals = () => request("/hospitals/");
+export const getHospitalDashboard = (hospitalId) =>
+  request(`/hospitals/${hospitalId}/dashboard`);
 export const createHospital = (data) =>
   request("/hospitals/", { method: "POST", body: JSON.stringify(data) });
 export const deleteHospital = (id) =>

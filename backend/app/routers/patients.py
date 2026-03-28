@@ -9,7 +9,7 @@ from app.schemas import (
     PatientCreate,
     PatientResponse,
 )
-from app.services.distance import get_driving_route, find_nearest_hospital_id
+from app.services.distance import find_nearest_hospital_id, get_driving_route_with_fallback
 from app.services.simulation import start_two_leg_travel
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
@@ -79,7 +79,7 @@ async def dispatch_patient(patient_id: str):
 
     for amb in available:
         try:
-            pickup_route = await get_driving_route(
+            pickup_route = await get_driving_route_with_fallback(
                 amb.location, patient.location, include_geometry=True
             )
             h_id, hospital_route = await find_nearest_hospital_id(

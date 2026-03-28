@@ -2,10 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  height: 100%;
+/* Use min-height so tall pages (e.g. hospital dashboard) can scroll; h-screen in App still pins dispatch to the viewport. */
+html {
+  min-height: 100%;
+}
+body {
   margin: 0;
+  min-height: 100%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+#root {
+  min-height: 100%;
 }
 
 .leaflet-container {

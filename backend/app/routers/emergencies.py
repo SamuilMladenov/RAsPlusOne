@@ -11,7 +11,7 @@ from app.models import (
     TRIAGE_AMBULANCE_CAPACITY,
 )
 from app.schemas import EmergencyCreate, EmergencyDispatch, EmergencyResponse
-from app.services.distance import get_driving_route, find_nearest_hospital_id
+from app.services.distance import find_nearest_hospital_id, get_driving_route_with_fallback
 from app.services.simulation import start_two_leg_travel
 
 router = APIRouter(prefix="/emergencies", tags=["Emergencies"])
@@ -62,7 +62,7 @@ async def create_emergency(body: EmergencyCreate):
 
             for amb in available:
                 try:
-                    pickup_route = await get_driving_route(
+                    pickup_route = await get_driving_route_with_fallback(
                         amb.location, body.location, include_geometry=True
                     )
                     h_id, hospital_route = await find_nearest_hospital_id(

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import * as api from "../api";
 
 export default function HospitalPanel({
@@ -16,13 +17,15 @@ export default function HospitalPanel({
     if (!clickedLocation) return toast("Click the map to set a location", "error");
     setLoading(true);
     try {
+      const n = parseInt(beds, 10) || 0;
       const res = await api.createHospital({
         location: clickedLocation,
         doctors: doctors
           .split(",")
           .map((d) => d.trim())
           .filter(Boolean),
-        available_beds: parseInt(beds, 10) || 0,
+        total_beds: n,
+        available_beds: n,
       });
       toast(`Hospital "${res.hospital_id}" created`);
       setDoctors("");
@@ -58,7 +61,7 @@ export default function HospitalPanel({
         />
         <input
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          placeholder="Available beds"
+          placeholder="Total bed capacity"
           type="number"
           min="0"
           value={beds}
@@ -89,16 +92,24 @@ export default function HospitalPanel({
             className="rounded-lg border border-gray-200 bg-white p-3 flex items-start justify-between group hover:shadow-sm transition-shadow"
           >
             <div>
-              <p className="text-sm font-medium text-gray-800">
-                {h.hospital_id}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium text-gray-800">
+                  {h.hospital_id}
+                </p>
+                <Link
+                  to={`/hospital/${h.hospital_id}`}
+                  className="text-[11px] font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                >
+                  Dashboard
+                </Link>
+              </div>
               <p className="text-xs text-gray-400 mt-0.5">
                 {h.location.latitude.toFixed(4)},{" "}
                 {h.location.longitude.toFixed(4)}
               </p>
               <p className="text-xs mt-1">
-                <span className={`font-medium ${h.available_beds > 0 ? "text-green-600" : "text-red-500"}`}>
-                  🛏️ {h.available_beds} bed{h.available_beds !== 1 && "s"}
+                <span className={`font-medium tabular-nums ${h.available_beds > 0 ? "text-green-600" : "text-red-500"}`}>
+                  🛏️ {h.available_beds}/{h.total_beds ?? h.available_beds} beds free
                 </span>
               </p>
               {h.doctors.length > 0 && (

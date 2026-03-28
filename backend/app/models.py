@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Location(BaseModel):
@@ -52,5 +52,12 @@ class Hospital(BaseModel):
     hospital_id: str
     location: Location
     doctors: list[str] = Field(default_factory=list)
+    total_beds: int = Field(default=10, ge=0)
     available_beds: int = Field(default=0, ge=0)
     patient_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def total_beds_covers_available(self) -> Hospital:
+        if self.total_beds < self.available_beds:
+            self.total_beds = self.available_beds
+        return self
