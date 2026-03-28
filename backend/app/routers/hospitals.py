@@ -1,9 +1,10 @@
 import asyncio
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import database as db
+from app.deps import AdminUser, CurrentUser, ensure_hospital_access, require_admin
 from app.models import Hospital
 from app.schemas import (
     HospitalCreate,
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
 
 
 @router.post("/", response_model=HospitalResponse, status_code=201)
-async def create_hospital(body: HospitalCreate):
+async def create_hospital(body: HospitalCreate, _admin: AdminUser):
     hospital_id = f"H-{uuid.uuid4().hex[:6].upper()}"
     hospital = Hospital(
         hospital_id=hospital_id,
@@ -37,12 +38,13 @@ async def create_hospital(body: HospitalCreate):
 
 
 @router.get("/", response_model=list[HospitalResponse])
-async def list_hospitals():
+async def list_hospitals(_admin: AdminUser):
     return list(db.hospitals.values())
 
 
 @router.get("/{hospital_id}/dashboard", response_model=HospitalDashboardResponse)
-async def get_hospital_dashboard(hospital_id: str):
+async def get_hospital_dashboard(hospital_id: str, user: CurrentUser):
+    ensure_hospital_access(user, hospital_id)
     hospital = db.hospitals.get(hospital_id)
     if not hospital:
         raise HTTPException(404, "Hospital not found")
@@ -71,7 +73,8 @@ async def get_hospital_dashboard(hospital_id: str):
 
 
 @router.get("/{hospital_id}", response_model=HospitalResponse)
-async def get_hospital(hospital_id: str):
+async def get_hospital(hospital_id: str, user: CurrentUser):
+    ensure_hospital_access(user, hospital_id)
     hospital = db.hospitals.get(hospital_id)
     if not hospital:
         raise HTTPException(404, "Hospital not found")
@@ -79,15 +82,26 @@ async def get_hospital(hospital_id: str):
 
 
 @router.patch("/{hospital_id}", response_model=HospitalResponse)
-async def update_hospital(hospital_id: str, body: HospitalUpdate):
+async def update_hospital(hospital_id: str, body: HospitalUpdate, user: CurrentUser):
+    """Admins may change any field. Hospital accounts may only update bed totals and availability."""
+    ensure_hospital_access(user, hospital_id)
+    if user.role == "hospital" and (
+        body.location is not None or body.doctors is not None
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Hospital accounts cannot change location or doctors",
+        )
+
     async with db.lock:
         hospital = db.hospitals.get(hospital_id)
         if not hospital:
             raise HTTPException(404, "Hospital not found")
-        if body.location is not None:
-            hospital.location = body.location
-        if body.doctors is not None:
-            hospital.doctors = body.doctors
+        if user.role == "admin":
+            if body.location is not None:
+                hospital.location = body.location
+            if body.doctors is not None:
+                hospital.doctors = body.doctors
         if body.burn_unit_beds_total is not None:
             hospital.burn_unit_beds_total = body.burn_unit_beds_total
         if body.burn_unit_beds_available is not None:
@@ -110,7 +124,7 @@ async def update_hospital(hospital_id: str, body: HospitalUpdate):
 
 
 @router.delete("/{hospital_id}", status_code=204)
-async def delete_hospital(hospital_id: str):
+async def delete_hospital(hospital_id: str, _admin: AdminUser):
     async with db.lock:
         if hospital_id not in db.hospitals:
             raise HTTPException(404, "Hospital not found")

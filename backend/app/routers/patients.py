@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import database as db
+from app.deps import require_admin
 from app.models import Patient, PatientStatus, TriagePriority
 from app.schemas import (
     DispatchResponse,
@@ -14,7 +15,11 @@ from app.services.dispatch_queue import (
     process_waiting_dispatch_queue,
 )
 
-router = APIRouter(prefix="/patients", tags=["Patients"])
+router = APIRouter(
+    prefix="/patients",
+    tags=["Patients"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.post("/", response_model=PatientResponse, status_code=201)

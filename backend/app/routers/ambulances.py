@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import database as db
+from app.deps import require_admin
 from app.models import Ambulance, AmbulanceStatus
 from app.schemas import (
     AmbulanceCreate,
@@ -18,7 +19,11 @@ from app.services.hospital_beds import (
 )
 from app.services.simulation import cancel_travel, start_travel
 
-router = APIRouter(prefix="/ambulances", tags=["Ambulances"])
+router = APIRouter(
+    prefix="/ambulances",
+    tags=["Ambulances"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.post("/", response_model=AmbulanceResponse, status_code=201)

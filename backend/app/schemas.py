@@ -92,12 +92,12 @@ class HospitalCreate(BaseModel):
 class HospitalUpdate(BaseModel):
     location: Optional[Location] = None
     doctors: Optional[list[str]] = None
-    burn_unit_beds_total: Optional[int] = None
-    burn_unit_beds_available: Optional[int] = None
-    trauma_center_beds_total: Optional[int] = None
-    trauma_center_beds_available: Optional[int] = None
-    general_beds_total: Optional[int] = None
-    general_beds_available: Optional[int] = None
+    burn_unit_beds_total: Optional[int] = Field(default=None, ge=0)
+    burn_unit_beds_available: Optional[int] = Field(default=None, ge=0)
+    trauma_center_beds_total: Optional[int] = Field(default=None, ge=0)
+    trauma_center_beds_available: Optional[int] = Field(default=None, ge=0)
+    general_beds_total: Optional[int] = Field(default=None, ge=0)
+    general_beds_available: Optional[int] = Field(default=None, ge=0)
 
 
 class HospitalResponse(BaseModel):

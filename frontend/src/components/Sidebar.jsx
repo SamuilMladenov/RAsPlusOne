@@ -18,6 +18,8 @@ export default function Sidebar({
   clickedLocation,
   onRefresh,
   toast,
+  user,
+  onLogout,
 }) {
   const [activeTab, setActiveTab] = useState("emergency");
 
@@ -25,12 +27,30 @@ export default function Sidebar({
     <div className="w-[380px] h-full flex flex-col bg-white border-r border-gray-200 shadow-xl z-10">
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
-        <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-          RAs+1 Dispatch
-        </h1>
-        <p className="text-xs text-gray-400 mt-0.5">
-          Ambulance management system
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+              RAs+1 Dispatch
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Ambulance management system
+            </p>
+          </div>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-[11px] font-medium text-gray-500 hover:text-red-600 px-2 py-1 rounded border border-gray-200 shrink-0"
+            >
+              Log out
+            </button>
+          )}
+        </div>
+        {user?.email && (
+          <p className="text-[10px] text-indigo-600 mt-2 truncate" title={user.email}>
+            {user.role === "admin" ? "Admin" : "Hospital"} · {user.email}
+          </p>
+        )}
       </div>
 
       {/* Tabs */}

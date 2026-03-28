@@ -1,14 +1,19 @@
 import random
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import database as db
+from app.deps import require_admin
 from app.models import AmbulanceStatus, Destination, Patient, TriagePriority
 from app.schemas import EmergencyCreate, EmergencyDispatch, EmergencyResponse
 from app.services.dispatch_queue import emergency_batches_for_triage, try_dispatch_batch
 
-router = APIRouter(prefix="/emergencies", tags=["Emergencies"])
+router = APIRouter(
+    prefix="/emergencies",
+    tags=["Emergencies"],
+    dependencies=[Depends(require_admin)],
+)
 
 TRIAGE_LEVELS = [TriagePriority.RED, TriagePriority.YELLOW, TriagePriority.GREEN]
 

@@ -1,10 +1,31 @@
-const BASE = "/api";
+const apiOrigin =
+  typeof import.meta.env.VITE_API_URL === "string" &&
+  import.meta.env.VITE_API_URL.trim() !== ""
+    ? import.meta.env.VITE_API_URL.trim().replace(/\/$/, "")
+    : "";
+
+/** Dev: Vite proxies `/api` → backend. Production (e.g. Render): set `VITE_API_URL` to the API origin. */
+const BASE = apiOrigin || "/api";
+
+function authHeaders() {
+  const t = localStorage.getItem("auth_token");
+  const h = { "Content-Type": "application/json" };
+  if (t) h.Authorization = `Bearer ${t}`;
+  return h;
+}
 
 async function request(path, opts = {}) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...opts.headers },
+    headers: { ...authHeaders(), ...opts.headers },
     ...opts,
   });
+  if (res.status === 401 && path !== "/auth/login") {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+  }
   if (res.status === 204) return null;
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -12,6 +33,15 @@ async function request(path, opts = {}) {
   }
   return res.json();
 }
+
+export async function login(email, password) {
+  return request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export const getMe = () => request("/auth/me");
 
 // ── Hospitals ──────────────────────────────────────────────────────
 export const getHospitals = () => request("/hospitals/");
@@ -21,6 +51,8 @@ export const createHospital = (data) =>
   request("/hospitals/", { method: "POST", body: JSON.stringify(data) });
 export const deleteHospital = (id) =>
   request(`/hospitals/${id}`, { method: "DELETE" });
+export const updateHospital = (id, data) =>
+  request(`/hospitals/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 
 // ── Ambulances ─────────────────────────────────────────────────────
 export const getAmbulances = () => request("/ambulances/");
