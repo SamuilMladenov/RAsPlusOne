@@ -20,7 +20,11 @@ async def create_patient(body: PatientCreate):
     patient_id = f"P-{uuid.uuid4().hex[:6].upper()}"
     patient = Patient(
         patient_id=patient_id,
-        triage_status=body.triage_status,
+        triage_priority=body.triage_priority,
+        respiration=body.respiration,
+        perfusion=body.perfusion,
+        mental_status=body.mental_status,
+        destination=body.destination,
         location=body.location,
     )
     async with db.lock:

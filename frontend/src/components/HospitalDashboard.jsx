@@ -11,12 +11,14 @@ const LEG_LABELS = {
 function triageDotClass(triage) {
   if (triage === "red") return "bg-red-500";
   if (triage === "yellow") return "bg-amber-500";
+  if (triage === "black") return "bg-gray-800";
   return "bg-green-500";
 }
 
 function triageLabel(triage) {
   if (triage === "red") return "Red (immediate)";
   if (triage === "yellow") return "Yellow (urgent)";
+  if (triage === "black") return "Black (expectant)";
   return "Green (minor)";
 }
 
@@ -180,10 +182,10 @@ export default function HospitalDashboard() {
                             <p className="font-mono text-gray-900 truncate">{p.patient_id}</p>
                           </div>
                           <div className="flex items-center gap-2 sm:w-48 shrink-0">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${triageDotClass(p.triage_status)}`} />
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${triageDotClass(p.triage_priority)}`} />
                             <div>
                               <p className="text-[10px] uppercase tracking-wide text-gray-400">Triage</p>
-                              <p className="text-gray-800">{triageLabel(p.triage_status)}</p>
+                              <p className="text-gray-800">{triageLabel(p.triage_priority)}</p>
                             </div>
                           </div>
                           <div className="sm:text-right sm:min-w-[10rem]">

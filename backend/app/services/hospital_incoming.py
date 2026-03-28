@@ -126,7 +126,7 @@ async def incoming_row_dict(ambulance: Ambulance, hospital: Hospital) -> dict:
             patients.append(
                 {
                     "patient_id": p.patient_id,
-                    "triage_status": p.triage_status,
+                    "triage_priority": p.triage_priority,
                     "location": loc,
                 }
             )

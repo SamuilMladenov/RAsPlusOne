@@ -6,7 +6,16 @@ from pydantic import BaseModel, Field, model_validator
 
 from enum import Enum
 
-from app.models import AmbulanceStatus, Location, PatientStatus, TriageStatus
+from app.models import (
+    AmbulanceStatus,
+    Destination,
+    Location,
+    MentalStatus,
+    PatientStatus,
+    Perfusion,
+    Respiration,
+    TriagePriority,
+)
 
 
 class IncomingAmbulanceLeg(str, Enum):
@@ -19,13 +28,21 @@ class IncomingAmbulanceLeg(str, Enum):
 
 class PatientCreate(BaseModel):
     location: Location
-    triage_status: TriageStatus = TriageStatus.GREEN
+    triage_priority: TriagePriority = TriagePriority.GREEN
+    respiration: Optional[Respiration] = None
+    perfusion: Optional[Perfusion] = None
+    mental_status: Optional[MentalStatus] = None
+    destination: Optional[Destination] = None
 
 
 class PatientResponse(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
-    triage_status: TriageStatus
+    triage_priority: TriagePriority
+    respiration: Optional[Respiration] = None
+    perfusion: Optional[Perfusion] = None
+    mental_status: Optional[MentalStatus] = None
+    destination: Optional[Destination] = None
     status: PatientStatus
     location: Optional[Location] = None
 
@@ -83,10 +100,8 @@ class HospitalResponse(BaseModel):
 # ── Hospital dashboard (incoming ambulances) ─────────────────────────
 
 class IncomingPatientBrief(BaseModel):
-    """Per-patient row for incoming ambulances. Extend later with name, chief_complaint, etc."""
-
     patient_id: str
-    triage_status: TriageStatus
+    triage_priority: TriagePriority
     location: Optional[Location] = None
 
 

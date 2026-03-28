@@ -53,6 +53,7 @@ const TRIAGE_MARKER_COLORS = {
   red: "#ef4444",
   yellow: "#f59e0b",
   green: "#22c55e",
+  black: "#1f2937",
 };
 
 function patientIcon(triage) {
@@ -187,13 +188,13 @@ export default function MapView({
           <Marker
             key={`p-${p.patient_id}`}
             position={[p.location.latitude, p.location.longitude]}
-            icon={patientIcon(p.triage_status)}
+            icon={patientIcon(p.triage_priority)}
           >
             <Popup>
               <div className="text-sm">
                 <p className="font-bold">{p.patient_id}</p>
-                <p className="text-xs uppercase font-medium" style={{ color: TRIAGE_MARKER_COLORS[p.triage_status] }}>
-                  Triage: {p.triage_status}
+                <p className="text-xs uppercase font-medium" style={{ color: TRIAGE_MARKER_COLORS[p.triage_priority] }}>
+                  Triage: {p.triage_priority}
                 </p>
                 <p className="text-xs text-gray-400">Waiting for pickup</p>
               </div>

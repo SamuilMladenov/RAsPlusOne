@@ -5,12 +5,14 @@ const TRIAGE_STYLES = {
   red: "bg-red-100 text-red-700 border-red-200",
   yellow: "bg-amber-100 text-amber-700 border-amber-200",
   green: "bg-green-100 text-green-700 border-green-200",
+  black: "bg-gray-800 text-white border-gray-700",
 };
 
 const TRIAGE_DOT = {
   red: "bg-red-500",
   yellow: "bg-amber-500",
   green: "bg-green-500",
+  black: "bg-gray-800",
 };
 
 const STATUS_STYLES = {
@@ -42,7 +44,7 @@ export default function PatientPanel({
     try {
       const res = await api.createPatient({
         location: clickedLocation,
-        triage_status: triage,
+        triage_priority: triage,
       });
       toast(`Patient "${res.patient_id}" created`);
       onRefresh();
@@ -72,7 +74,7 @@ export default function PatientPanel({
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
         <h3 className="text-sm font-semibold text-gray-700">Add Patient</h3>
         <div className="flex gap-2">
-          {["red", "yellow", "green"].map((t) => (
+          {["red", "yellow", "green", "black"].map((t) => (
             <button
               key={t}
               onClick={() => setTriage(t)}
@@ -115,8 +117,8 @@ export default function PatientPanel({
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`w-2.5 h-2.5 rounded-full ${TRIAGE_DOT[p.triage_status] || "bg-gray-400"}`}
-                    title={`Triage: ${p.triage_status}`}
+                    className={`w-2.5 h-2.5 rounded-full ${TRIAGE_DOT[p.triage_priority] || "bg-gray-400"}`}
+                    title={`Triage: ${p.triage_priority}`}
                   />
                   <div>
                     <p className="text-sm font-medium text-gray-800">
@@ -138,9 +140,9 @@ export default function PatientPanel({
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${TRIAGE_STYLES[p.triage_status]}`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${TRIAGE_STYLES[p.triage_priority]}`}
                   >
-                    {p.triage_status}
+                    {p.triage_priority}
                   </span>
                   <button
                     onClick={() => handleDelete(p.patient_id)}

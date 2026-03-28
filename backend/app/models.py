@@ -11,17 +11,46 @@ class Location(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
 
 
-class TriageStatus(str, Enum):
+class TriagePriority(str, Enum):
     RED = "red"
     YELLOW = "yellow"
     GREEN = "green"
+    BLACK = "black"
 
 
 TRIAGE_AMBULANCE_CAPACITY = {
-    TriageStatus.RED: 1,
-    TriageStatus.YELLOW: 3,
-    TriageStatus.GREEN: 5,
+    TriagePriority.RED: 1,
+    TriagePriority.YELLOW: 3,
+    TriagePriority.GREEN: 5,
+    TriagePriority.BLACK: 0,
 }
+
+
+class Respiration(str, Enum):
+    NOT_BREATHING = "Not Breathing"
+    UNDER_10 = "< 10 / min"
+    NORMAL = "10 - 30 / min"
+    OVER_30 = "> 30 / min"
+
+
+class Perfusion(str, Enum):
+    RADIAL_PRESENT = "Radial pulse present"
+    NO_RADIAL = "No radial pulse"
+    CAP_UNDER_2 = "Capillary refill < 2 sec"
+    CAP_OVER_2 = "Capillary refill > 2 sec"
+    SEVERE_BLEEDING = "Severe bleeding"
+
+
+class MentalStatus(str, Enum):
+    ALERT = "Alert"
+    UNRESPONSIVE = "Unresponsive"
+    CANNOT_FOLLOW = "Cannot follow commands"
+
+
+class Destination(str, Enum):
+    TRAUMA_CENTER = "Trauma Center"
+    GENERAL_HOSPITAL = "General Hospital"
+    BURN_UNIT = "Burn Unit"
 
 
 class AmbulanceStatus(str, Enum):
@@ -42,7 +71,11 @@ class PatientStatus(str, Enum):
 class Patient(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
-    triage_status: TriageStatus = TriageStatus.GREEN
+    triage_priority: TriagePriority = TriagePriority.GREEN
+    respiration: Optional[Respiration] = None
+    perfusion: Optional[Perfusion] = None
+    mental_status: Optional[MentalStatus] = None
+    destination: Optional[Destination] = None
     status: PatientStatus = PatientStatus.WAITING
     location: Optional[Location] = None
 

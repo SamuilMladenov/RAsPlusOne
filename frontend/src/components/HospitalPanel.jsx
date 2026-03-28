@@ -121,7 +121,7 @@ export default function HospitalPanel({
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {h.patient_ids.map((pid) => {
                     const pt = patients.find((p) => p.patient_id === pid);
-                    const dotColor = pt?.triage_status === "red" ? "bg-red-500" : pt?.triage_status === "yellow" ? "bg-amber-500" : "bg-green-500";
+                    const dotColor = pt?.triage_priority === "red" ? "bg-red-500" : pt?.triage_priority === "yellow" ? "bg-amber-500" : pt?.triage_priority === "black" ? "bg-gray-800" : "bg-green-500";
                     return (
                       <span key={pid} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-[10px] text-gray-600">
                         <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />

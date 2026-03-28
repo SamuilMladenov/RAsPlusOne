@@ -8,7 +8,7 @@ from app.models import (
     AmbulanceStatus,
     Patient,
     PatientStatus,
-    TriageStatus,
+    TriagePriority,
     TRIAGE_AMBULANCE_CAPACITY,
 )
 from app.schemas import EmergencyCreate, EmergencyDispatch, EmergencyResponse
@@ -17,7 +17,7 @@ from app.services.simulation import start_two_leg_travel
 
 router = APIRouter(prefix="/emergencies", tags=["Emergencies"])
 
-TRIAGE_LEVELS = list(TriageStatus)
+TRIAGE_LEVELS = [TriagePriority.RED, TriagePriority.YELLOW, TriagePriority.GREEN]
 
 
 @router.post("/", response_model=EmergencyResponse)
@@ -32,12 +32,12 @@ async def create_emergency(body: EmergencyCreate):
         raise HTTPException(400, "No hospitals registered in the system")
 
     # Create patients under lock
-    patients_by_triage: dict[TriageStatus, list[str]] = {t: [] for t in TriageStatus}
+    patients_by_triage: dict[TriagePriority, list[str]] = {t: [] for t in TriagePriority}
     async with db.lock:
         for _ in range(body.patient_count):
             pid = f"EM-{uuid.uuid4().hex[:6].upper()}"
             triage = random.choice(TRIAGE_LEVELS)
-            patient = Patient(patient_id=pid, triage_status=triage, location=body.location)
+            patient = Patient(patient_id=pid, triage_priority=triage, location=body.location)
             db.patients[pid] = patient
             patients_by_triage[triage].append(pid)
 
@@ -49,7 +49,7 @@ async def create_emergency(body: EmergencyCreate):
     dispatched: list[EmergencyDispatch] = []
     unassigned: list[str] = []
 
-    priority_order = [TriageStatus.RED, TriageStatus.YELLOW, TriageStatus.GREEN]
+    priority_order = [TriagePriority.RED, TriagePriority.YELLOW, TriagePriority.GREEN]
 
     for triage in priority_order:
         pids = patients_by_triage[triage]
