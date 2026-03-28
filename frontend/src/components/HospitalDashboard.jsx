@@ -27,6 +27,18 @@ function formatLocation(loc) {
   return `${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}`;
 }
 
+/** Backend sends ETA in minutes (often fractional); show whole minutes + seconds. */
+function formatEtaMinSec(etaMinutes) {
+  const m = Number(etaMinutes);
+  if (!Number.isFinite(m) || m < 0) return null;
+  const totalSeconds = Math.round(m * 60);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  if (mins === 0) return `${secs} sec`;
+  if (secs === 0) return `${mins} min`;
+  return `${mins} min ${secs} sec`;
+}
+
 function formatOptional(v) {
   if (v == null || v === "") return "—";
   return String(v);
@@ -265,7 +277,7 @@ export default function HospitalDashboard() {
                       {row.eta_minutes_to_hospital != null ? (
                         <>
                           <p className="text-lg font-bold text-primary-700 tabular-nums">
-                            ~{row.eta_minutes_to_hospital} min
+                            ~{formatEtaMinSec(row.eta_minutes_to_hospital) ?? row.eta_minutes_to_hospital}
                             {row.eta_approximate && (
                               <span className="text-xs font-normal text-amber-700 ml-1">(approx.)</span>
                             )}
