@@ -49,6 +49,23 @@ function ambulanceIcon(status) {
   `, 40);
 }
 
+const TRIAGE_MARKER_COLORS = {
+  red: "#ef4444",
+  yellow: "#f59e0b",
+  green: "#22c55e",
+};
+
+function patientIcon(triage) {
+  const color = TRIAGE_MARKER_COLORS[triage] || "#6b7280";
+  return svgIcon(`
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="14" cy="14" r="12" fill="${color}" stroke="#fff" stroke-width="2"/>
+      <circle cx="14" cy="10" r="3" fill="#fff"/>
+      <path d="M8 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#fff" stroke-width="2" fill="none"/>
+    </svg>
+  `, 28);
+}
+
 function clickIcon() {
   return svgIcon(`
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -89,6 +106,7 @@ function FitBounds({ hospitals, ambulances }) {
 export default function MapView({
   hospitals,
   ambulances,
+  patients,
   onMapClick,
   clickedLocation,
 }) {
@@ -162,6 +180,26 @@ export default function MapView({
           </Popup>
         </Marker>
       ))}
+
+      {patients
+        .filter((p) => p.location && !p.ambulance_id)
+        .map((p) => (
+          <Marker
+            key={`p-${p.patient_id}`}
+            position={[p.location.latitude, p.location.longitude]}
+            icon={patientIcon(p.triage_status)}
+          >
+            <Popup>
+              <div className="text-sm">
+                <p className="font-bold">{p.patient_id}</p>
+                <p className="text-xs uppercase font-medium" style={{ color: TRIAGE_MARKER_COLORS[p.triage_status] }}>
+                  Triage: {p.triage_status}
+                </p>
+                <p className="text-xs text-gray-400">Waiting for pickup</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
 
       {clickedLocation && (
         <Marker

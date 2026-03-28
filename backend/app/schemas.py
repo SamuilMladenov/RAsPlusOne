@@ -10,6 +10,7 @@ from app.models import AmbulanceStatus, Location, TriageStatus
 # ── Patient ──────────────────────────────────────────────────────────
 
 class PatientCreate(BaseModel):
+    location: Location
     triage_status: TriageStatus = TriageStatus.GREEN
 
 
@@ -17,6 +18,7 @@ class PatientResponse(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
     triage_status: TriageStatus
+    location: Optional[Location] = None
 
 
 # ── Ambulance ────────────────────────────────────────────────────────

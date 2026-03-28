@@ -37,6 +37,7 @@ class Patient(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
     triage_status: TriageStatus = TriageStatus.GREEN
+    location: Optional[Location] = None
 
 
 class Ambulance(BaseModel):

@@ -64,7 +64,10 @@ export default function App() {
   // Auto-poll every second while any ambulance is actively travelling
   useEffect(() => {
     const hasMoving = ambulances.some(
-      (a) => a.status === "transporting" || a.status === "en_route",
+      (a) =>
+        a.status === "transporting" ||
+        a.status === "en_route" ||
+        a.status === "at_scene",
     );
     if (!hasMoving) return;
     const id = setInterval(refresh, 1000);
@@ -85,6 +88,7 @@ export default function App() {
         <MapView
           hospitals={hospitals}
           ambulances={ambulances}
+          patients={patients}
           onMapClick={setClickedLocation}
           clickedLocation={clickedLocation}
         />

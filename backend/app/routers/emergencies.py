@@ -11,8 +11,8 @@ from app.models import (
     TRIAGE_AMBULANCE_CAPACITY,
 )
 from app.schemas import EmergencyCreate, EmergencyDispatch, EmergencyResponse
-from app.services.distance import find_nearest_hospital_id
-from app.services.simulation import start_travel
+from app.services.distance import get_driving_route, find_nearest_hospital_id
+from app.services.simulation import start_two_leg_travel
 
 router = APIRouter(prefix="/emergencies", tags=["Emergencies"])
 
@@ -21,8 +21,8 @@ TRIAGE_LEVELS = list(TriageStatus)
 
 @router.post("/", response_model=EmergencyResponse)
 async def create_emergency(body: EmergencyCreate):
-    """Create an emergency event: bulk-create patients with random triage,
-    group them by triage capacity, and dispatch ambulances."""
+    """Create an emergency: bulk-create patients at a location with random triage,
+    dispatch ambulances to pick them up, then route to nearest hospitals."""
     if not db.hospitals:
         raise HTTPException(400, "No hospitals registered in the system")
 
@@ -30,7 +30,7 @@ async def create_emergency(body: EmergencyCreate):
     for _ in range(body.patient_count):
         pid = f"EM-{uuid.uuid4().hex[:6].upper()}"
         triage = random.choice(TRIAGE_LEVELS)
-        patient = Patient(patient_id=pid, triage_status=triage)
+        patient = Patient(patient_id=pid, triage_status=triage, location=body.location)
         db.patients[pid] = patient
         patients_by_triage[triage].append(pid)
 
@@ -56,22 +56,38 @@ async def create_emergency(body: EmergencyCreate):
                 continue
 
             best_amb = None
-            best_route = None
+            best_pickup_route = None
+            best_hospital_route = None
             best_hospital_id = None
 
             for amb in available:
                 try:
-                    h_id, route = await find_nearest_hospital_id(
-                        amb.location, db.hospitals, include_geometry=True
+                    pickup_route = await get_driving_route(
+                        amb.location, body.location, include_geometry=True
+                    )
+                    h_id, hospital_route = await find_nearest_hospital_id(
+                        body.location, db.hospitals, include_geometry=True
                     )
                 except Exception:
                     continue
-                if best_route is None or route.distance_km < best_route.distance_km:
+                total = pickup_route.distance_km + hospital_route.distance_km
+                best_total = (
+                    (best_pickup_route.distance_km + best_hospital_route.distance_km)
+                    if best_pickup_route and best_hospital_route
+                    else float("inf")
+                )
+                if total < best_total:
                     best_amb = amb
-                    best_route = route
+                    best_pickup_route = pickup_route
+                    best_hospital_route = hospital_route
                     best_hospital_id = h_id
 
-            if best_amb is None or best_route is None or best_hospital_id is None:
+            if (
+                best_amb is None
+                or best_pickup_route is None
+                or best_hospital_route is None
+                or best_hospital_id is None
+            ):
                 unassigned.extend(batch)
                 continue
 
@@ -90,17 +106,22 @@ async def create_emergency(body: EmergencyCreate):
             best_amb.hospital_id = best_hospital_id
             best_amb.status = AmbulanceStatus.EN_ROUTE
 
-            if best_route.waypoints:
-                start_travel(best_amb.ambulance_id, best_amb, best_route.waypoints)
-            else:
-                best_amb.status = AmbulanceStatus.AT_HOSPITAL
+            total_km = best_pickup_route.distance_km + best_hospital_route.distance_km
+            total_min = best_pickup_route.duration_minutes + best_hospital_route.duration_minutes
+
+            start_two_leg_travel(
+                best_amb.ambulance_id,
+                best_amb,
+                best_pickup_route.waypoints,
+                best_hospital_route.waypoints,
+            )
 
             dispatched.append(EmergencyDispatch(
                 patient_ids=list(batch),
                 ambulance_id=best_amb.ambulance_id,
                 hospital_id=best_hospital_id,
-                distance_km=best_route.distance_km,
-                duration_minutes=best_route.duration_minutes,
+                distance_km=round(total_km, 2),
+                duration_minutes=round(total_min, 2),
             ))
 
     return EmergencyResponse(dispatched=dispatched, unassigned_patients=unassigned)

@@ -37,6 +37,7 @@ def _on_arrival(ambulance_id: str, ambulance):
         patient = db.patients.get(pid)
         if patient:
             patient.ambulance_id = None
+            patient.location = None
         if hospital and pid not in hospital.patient_ids:
             hospital.patient_ids.append(pid)
 
@@ -45,50 +46,100 @@ def _on_arrival(ambulance_id: str, ambulance):
     ambulance.status = AmbulanceStatus.AVAILABLE
 
 
-async def _run_travel(ambulance_id: str, ambulance, waypoints: list[Location]):
-    """Move the ambulance along waypoints at SPEED_KMH."""
-    try:
-        ambulance.status = AmbulanceStatus.TRANSPORTING
+async def _travel_leg(ambulance_id: str, ambulance, waypoints: list[Location]):
+    """Move the ambulance along a single set of waypoints. Returns True if completed."""
+    if len(waypoints) < 2:
+        if waypoints:
+            ambulance.location = waypoints[-1]
+        return True
 
-        if len(waypoints) < 2:
-            _on_arrival(ambulance_id, ambulance)
+    seg_idx = 0
+    seg_progress_km = 0.0
+    seg_distance = _haversine_km(waypoints[0], waypoints[1])
+
+    while seg_idx < len(waypoints) - 1:
+        await asyncio.sleep(TICK_SECONDS)
+
+        if ambulance_id not in _active_tasks:
+            return False
+
+        km_per_tick = SPEED_KMH * (TICK_SECONDS / 3600.0)
+        seg_progress_km += km_per_tick
+
+        while seg_progress_km >= seg_distance and seg_idx < len(waypoints) - 1:
+            seg_progress_km -= seg_distance
+            seg_idx += 1
+            if seg_idx < len(waypoints) - 1:
+                seg_distance = _haversine_km(waypoints[seg_idx], waypoints[seg_idx + 1])
+
+        if seg_idx >= len(waypoints) - 1:
+            ambulance.location = waypoints[-1]
+            return True
+
+        fraction = seg_progress_km / seg_distance if seg_distance > 0 else 0
+        fraction = min(fraction, 1.0)
+        ambulance.location = _interpolate(waypoints[seg_idx], waypoints[seg_idx + 1], fraction)
+
+    return True
+
+
+async def _run_two_leg_travel(
+    ambulance_id: str,
+    ambulance,
+    pickup_waypoints: list[Location],
+    hospital_waypoints: list[Location],
+):
+    """Leg 1: drive to patient (EN_ROUTE → AT_SCENE), Leg 2: drive to hospital (TRANSPORTING → unload)."""
+    try:
+        ambulance.status = AmbulanceStatus.EN_ROUTE
+
+        if not await _travel_leg(ambulance_id, ambulance, pickup_waypoints):
             return
 
-        seg_idx = 0
-        seg_progress_km = 0.0
-        seg_distance = _haversine_km(waypoints[0], waypoints[1])
+        ambulance.status = AmbulanceStatus.AT_SCENE
+        await asyncio.sleep(2)
+        if ambulance_id not in _active_tasks:
+            return
 
-        while seg_idx < len(waypoints) - 1:
-            await asyncio.sleep(TICK_SECONDS)
+        ambulance.status = AmbulanceStatus.TRANSPORTING
 
-            if ambulance_id not in _active_tasks:
-                return
-
-            km_per_tick = SPEED_KMH * (TICK_SECONDS / 3600.0)
-            seg_progress_km += km_per_tick
-
-            while seg_progress_km >= seg_distance and seg_idx < len(waypoints) - 1:
-                seg_progress_km -= seg_distance
-                seg_idx += 1
-                if seg_idx < len(waypoints) - 1:
-                    seg_distance = _haversine_km(waypoints[seg_idx], waypoints[seg_idx + 1])
-
-            if seg_idx >= len(waypoints) - 1:
-                ambulance.location = waypoints[-1]
-                break
-
-            fraction = seg_progress_km / seg_distance if seg_distance > 0 else 0
-            fraction = min(fraction, 1.0)
-            ambulance.location = _interpolate(waypoints[seg_idx], waypoints[seg_idx + 1], fraction)
+        if not await _travel_leg(ambulance_id, ambulance, hospital_waypoints):
+            return
 
         _on_arrival(ambulance_id, ambulance)
     finally:
         _active_tasks.pop(ambulance_id, None)
 
 
+async def _run_single_leg_travel(ambulance_id: str, ambulance, waypoints: list[Location]):
+    """Single-leg travel directly to hospital (for assign-hospital without pickup)."""
+    try:
+        ambulance.status = AmbulanceStatus.TRANSPORTING
+
+        if not await _travel_leg(ambulance_id, ambulance, waypoints):
+            return
+
+        _on_arrival(ambulance_id, ambulance)
+    finally:
+        _active_tasks.pop(ambulance_id, None)
+
+
+def start_two_leg_travel(
+    ambulance_id: str,
+    ambulance,
+    pickup_waypoints: list[Location],
+    hospital_waypoints: list[Location],
+):
+    cancel_travel(ambulance_id)
+    task = asyncio.create_task(
+        _run_two_leg_travel(ambulance_id, ambulance, pickup_waypoints, hospital_waypoints)
+    )
+    _active_tasks[ambulance_id] = task
+
+
 def start_travel(ambulance_id: str, ambulance, waypoints: list[Location]):
     cancel_travel(ambulance_id)
-    task = asyncio.create_task(_run_travel(ambulance_id, ambulance, waypoints))
+    task = asyncio.create_task(_run_single_leg_travel(ambulance_id, ambulance, waypoints))
     _active_tasks[ambulance_id] = task
 
 

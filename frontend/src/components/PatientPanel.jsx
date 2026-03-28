@@ -16,6 +16,7 @@ const TRIAGE_DOT = {
 export default function PatientPanel({
   patients,
   ambulances,
+  clickedLocation,
   onRefresh,
   toast,
 }) {
@@ -24,9 +25,14 @@ export default function PatientPanel({
   const [dispatching, setDispatching] = useState(null);
 
   const handleCreate = async () => {
+    if (!clickedLocation)
+      return toast("Click the map to set the patient location", "error");
     setLoading(true);
     try {
-      const res = await api.createPatient({ triage_status: triage });
+      const res = await api.createPatient({
+        location: clickedLocation,
+        triage_status: triage,
+      });
       toast(`Patient "${res.patient_id}" created`);
       onRefresh();
     } catch (e) {
@@ -84,6 +90,9 @@ export default function PatientPanel({
             </button>
           ))}
         </div>
+        <p className="text-xs text-gray-400">
+          📍 Click the map to set the patient location
+        </p>
         <button
           onClick={handleCreate}
           disabled={loading}

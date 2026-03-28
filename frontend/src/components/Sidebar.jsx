@@ -96,6 +96,7 @@ export default function Sidebar({
           <PatientPanel
             patients={patients}
             ambulances={ambulances}
+            clickedLocation={clickedLocation}
             onRefresh={onRefresh}
             toast={toast}
           />
