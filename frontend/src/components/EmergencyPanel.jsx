@@ -14,7 +14,14 @@ export default function EmergencyPanel({
   const availableAmbulances = ambulances.filter(
     (a) => a.status === "available",
   ).length;
-  const totalBeds = hospitals.reduce((s, h) => s + h.available_beds, 0);
+  const totalBeds = hospitals.reduce(
+    (s, h) =>
+      s +
+      (h.burn_unit_beds_available ?? 0) +
+      (h.trauma_center_beds_available ?? 0) +
+      (h.general_beds_available ?? 0),
+    0,
+  );
 
   const handleEmergency = async () => {
     if (!clickedLocation)
@@ -52,9 +59,11 @@ export default function EmergencyPanel({
         </div>
 
         <p className="text-xs text-red-600">
-          Click a location on the map, set the number of patients, and trigger
-          the emergency. Available ambulances will be dispatched to the nearest
-          hospitals.
+          Creates patients at the scene with random triage and destination. Dispatch
+          order is red, then yellow, then green; red and yellow travel one per
+          ambulance, green up to two per ambulance when destination and location
+          match. The nearest available ambulance to the scene is chosen first.
+          Hospitals must have matching free beds.
         </p>
 
         <div>

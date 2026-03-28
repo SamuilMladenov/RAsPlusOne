@@ -24,8 +24,12 @@ async def create_hospital(body: HospitalCreate):
         hospital_id=hospital_id,
         location=body.location,
         doctors=body.doctors,
-        total_beds=body.total_beds,
-        available_beds=body.available_beds,
+        burn_unit_beds_total=body.burn_unit_beds_total,
+        burn_unit_beds_available=body.burn_unit_beds_available,
+        trauma_center_beds_total=body.trauma_center_beds_total,
+        trauma_center_beds_available=body.trauma_center_beds_available,
+        general_beds_total=body.general_beds_total,
+        general_beds_available=body.general_beds_available,
     )
     async with db.lock:
         db.hospitals[hospital_id] = hospital
@@ -84,12 +88,24 @@ async def update_hospital(hospital_id: str, body: HospitalUpdate):
             hospital.location = body.location
         if body.doctors is not None:
             hospital.doctors = body.doctors
-        if body.total_beds is not None:
-            hospital.total_beds = body.total_beds
-        if body.available_beds is not None:
-            hospital.available_beds = body.available_beds
-        if hospital.total_beds < hospital.available_beds:
-            hospital.total_beds = hospital.available_beds
+        if body.burn_unit_beds_total is not None:
+            hospital.burn_unit_beds_total = body.burn_unit_beds_total
+        if body.burn_unit_beds_available is not None:
+            hospital.burn_unit_beds_available = body.burn_unit_beds_available
+        if body.trauma_center_beds_total is not None:
+            hospital.trauma_center_beds_total = body.trauma_center_beds_total
+        if body.trauma_center_beds_available is not None:
+            hospital.trauma_center_beds_available = body.trauma_center_beds_available
+        if body.general_beds_total is not None:
+            hospital.general_beds_total = body.general_beds_total
+        if body.general_beds_available is not None:
+            hospital.general_beds_available = body.general_beds_available
+        if hospital.burn_unit_beds_total < hospital.burn_unit_beds_available:
+            hospital.burn_unit_beds_total = hospital.burn_unit_beds_available
+        if hospital.trauma_center_beds_total < hospital.trauma_center_beds_available:
+            hospital.trauma_center_beds_total = hospital.trauma_center_beds_available
+        if hospital.general_beds_total < hospital.general_beds_available:
+            hospital.general_beds_total = hospital.general_beds_available
     return hospital
 
 

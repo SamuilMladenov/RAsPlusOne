@@ -11,6 +11,11 @@ from app.schemas import (
     AssignHospitalResponse,
 )
 from app.services.distance import find_hospitals_sorted
+from app.services.hospital_beds import (
+    count_bed_needs_from_patients,
+    hospital_can_fulfill,
+    hospital_reserve,
+)
 from app.services.simulation import cancel_travel, start_travel
 
 router = APIRouter(prefix="/ambulances", tags=["Ambulances"])
@@ -107,10 +112,17 @@ async def assign_nearest_hospital(ambulance_id: str):
     if not db.hospitals:
         raise HTTPException(400, "No hospitals registered in the system")
 
+    patients_on_board = [
+        db.patients[pid] for pid in ambulance.patient_ids if pid in db.patients
+    ]
+    if not patients_on_board:
+        raise HTTPException(400, "Ambulance has no patients to transport")
+    bed_needs = count_bed_needs_from_patients(patients_on_board)
+
     # Compute routes to all hospitals (outside lock)
     try:
         ranked = await find_hospitals_sorted(
-            ambulance.location, db.hospitals, include_geometry=True
+            ambulance.location, db.hospitals, include_geometry=True, bed_needs=bed_needs
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -124,10 +136,10 @@ async def assign_nearest_hospital(ambulance_id: str):
     async with db.lock:
         for hospital_id, route in ranked:
             hospital = db.hospitals.get(hospital_id)
-            if not hospital or hospital.available_beds <= 0:
+            if not hospital or not hospital_can_fulfill(hospital, bed_needs):
                 continue
 
-            hospital.available_beds -= 1
+            hospital_reserve(hospital, bed_needs)
             ambulance.hospital_id = hospital_id
             ambulance.status = AmbulanceStatus.EN_ROUTE
 

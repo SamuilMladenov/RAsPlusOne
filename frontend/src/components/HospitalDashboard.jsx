@@ -88,7 +88,14 @@ export default function HospitalDashboard() {
   }
 
   const { hospital, incoming } = data;
-  const totalBeds = hospital.total_beds ?? hospital.available_beds;
+  const totalAvail =
+    (hospital.burn_unit_beds_available ?? 0) +
+    (hospital.trauma_center_beds_available ?? 0) +
+    (hospital.general_beds_available ?? 0);
+  const totalCap =
+    (hospital.burn_unit_beds_total ?? 0) +
+    (hospital.trauma_center_beds_total ?? 0) +
+    (hospital.general_beds_total ?? 0);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -102,11 +109,11 @@ export default function HospitalDashboard() {
         <div className="flex items-center gap-4 text-sm">
           <span
             className={
-              hospital.available_beds > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"
+              totalAvail > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"
             }
           >
             <span className="tabular-nums">
-              Beds {hospital.available_beds}/{totalBeds}
+              Beds {totalAvail}/{totalCap}
             </span>{" "}
             free
           </span>

@@ -70,7 +70,7 @@ export default function App() {
         a.status === "at_scene",
     );
     if (!hasMoving) return;
-    const id = setInterval(refresh, 3000);
+    const id = setInterval(refresh, 1000);
     return () => clearInterval(id);
   }, [ambulances, refresh]);
 

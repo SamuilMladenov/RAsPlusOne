@@ -28,8 +28,12 @@ _SEED_HOSPITALS: list[Hospital] = [
             "Dr. Nikolay Georgiev",
             "Dr. Mariya Stoyanova",
         ],
-        total_beds=12,
-        available_beds=12,
+        burn_unit_beds_total=4,
+        burn_unit_beds_available=4,
+        trauma_center_beds_total=4,
+        trauma_center_beds_available=4,
+        general_beds_total=4,
+        general_beds_available=4,
         patient_ids=[],
     ),
     Hospital(
@@ -39,8 +43,12 @@ _SEED_HOSPITALS: list[Hospital] = [
             "Dr. Ivan Dimitrov",
             "Dr. Stefka Atanasova",
         ],
-        total_beds=8,
-        available_beds=8,
+        burn_unit_beds_total=3,
+        burn_unit_beds_available=3,
+        trauma_center_beds_total=3,
+        trauma_center_beds_available=3,
+        general_beds_total=2,
+        general_beds_available=2,
         patient_ids=[],
     ),
     Hospital(
@@ -52,8 +60,12 @@ _SEED_HOSPITALS: list[Hospital] = [
             "Dr. Andrey Nikolov",
             "Dr. Vesela Todorova",
         ],
-        total_beds=15,
-        available_beds=15,
+        burn_unit_beds_total=5,
+        burn_unit_beds_available=5,
+        trauma_center_beds_total=5,
+        trauma_center_beds_available=5,
+        general_beds_total=5,
+        general_beds_available=5,
         patient_ids=[],
     ),
 ]
@@ -109,9 +121,14 @@ def _env_wants_seed() -> bool:
 
 
 def seed_on_startup_if_configured() -> None:
-    """Call from FastAPI lifespan when ``SEED_DEMO_DATA`` is enabled."""
+    """Call from FastAPI lifespan when ``SEED_DEMO_DATA`` is enabled.
+
+    Clears the in-memory store (patients, hospitals, ambulances) then loads
+    demo hospitals and ambulances so each start is a fresh seeded demo.
+    """
     if _env_wants_seed():
-        apply_seed_data(replace=False)
+        db.patients.clear()
+        apply_seed_data(replace=True)
 
 
 def main() -> None:

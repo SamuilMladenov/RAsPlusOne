@@ -18,10 +18,11 @@ class TriagePriority(str, Enum):
     BLACK = "black"
 
 
+# Max patients per ambulance load when batching (red/yellow: alone; green: up to 2 if same destination + site).
 TRIAGE_AMBULANCE_CAPACITY = {
     TriagePriority.RED: 1,
-    TriagePriority.YELLOW: 3,
-    TriagePriority.GREEN: 5,
+    TriagePriority.YELLOW: 1,
+    TriagePriority.GREEN: 2,
     TriagePriority.BLACK: 0,
 }
 
@@ -92,12 +93,20 @@ class Hospital(BaseModel):
     hospital_id: str
     location: Location
     doctors: list[str] = Field(default_factory=list)
-    total_beds: int = Field(default=10, ge=0)
-    available_beds: int = Field(default=0, ge=0)
+    burn_unit_beds_total: int = Field(default=0, ge=0)
+    burn_unit_beds_available: int = Field(default=0, ge=0)
+    trauma_center_beds_total: int = Field(default=0, ge=0)
+    trauma_center_beds_available: int = Field(default=0, ge=0)
+    general_beds_total: int = Field(default=0, ge=0)
+    general_beds_available: int = Field(default=0, ge=0)
     patient_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def total_beds_covers_available(self) -> Hospital:
-        if self.total_beds < self.available_beds:
-            self.total_beds = self.available_beds
+    def totals_cover_available(self) -> Hospital:
+        if self.burn_unit_beds_total < self.burn_unit_beds_available:
+            self.burn_unit_beds_total = self.burn_unit_beds_available
+        if self.trauma_center_beds_total < self.trauma_center_beds_available:
+            self.trauma_center_beds_total = self.trauma_center_beds_available
+        if self.general_beds_total < self.general_beds_available:
+            self.general_beds_total = self.general_beds_available
         return self

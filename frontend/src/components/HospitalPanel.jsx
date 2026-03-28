@@ -2,6 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import * as api from "../api";
 
+function totalBedsAvailable(h) {
+  return (
+    (h.burn_unit_beds_available ?? 0) +
+    (h.trauma_center_beds_available ?? 0) +
+    (h.general_beds_available ?? 0)
+  );
+}
+
 export default function HospitalPanel({
   hospitals,
   patients,
@@ -10,26 +18,36 @@ export default function HospitalPanel({
   toast,
 }) {
   const [doctors, setDoctors] = useState("");
-  const [beds, setBeds] = useState("10");
+  const [burn, setBurn] = useState("4");
+  const [trauma, setTrauma] = useState("4");
+  const [general, setGeneral] = useState("4");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
     if (!clickedLocation) return toast("Click the map to set a location", "error");
     setLoading(true);
     try {
-      const n = parseInt(beds, 10) || 0;
+      const b = parseInt(burn, 10) || 0;
+      const t = parseInt(trauma, 10) || 0;
+      const g = parseInt(general, 10) || 0;
       const res = await api.createHospital({
         location: clickedLocation,
         doctors: doctors
           .split(",")
           .map((d) => d.trim())
           .filter(Boolean),
-        total_beds: n,
-        available_beds: n,
+        burn_unit_beds_total: b,
+        burn_unit_beds_available: b,
+        trauma_center_beds_total: t,
+        trauma_center_beds_available: t,
+        general_beds_total: g,
+        general_beds_available: g,
       });
       toast(`Hospital "${res.hospital_id}" created`);
       setDoctors("");
-      setBeds("10");
+      setBurn("4");
+      setTrauma("4");
+      setGeneral("4");
       onRefresh();
     } catch (e) {
       toast(e.message, "error");
@@ -59,14 +77,38 @@ export default function HospitalPanel({
           value={doctors}
           onChange={(e) => setDoctors(e.target.value)}
         />
-        <input
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          placeholder="Total bed capacity"
-          type="number"
-          min="0"
-          value={beds}
-          onChange={(e) => setBeds(e.target.value)}
-        />
+        <div className="grid grid-cols-3 gap-2">
+          <label className="text-[10px] text-gray-500">
+            Burn unit beds
+            <input
+              className="mt-0.5 w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg"
+              type="number"
+              min="0"
+              value={burn}
+              onChange={(e) => setBurn(e.target.value)}
+            />
+          </label>
+          <label className="text-[10px] text-gray-500">
+            Trauma center beds
+            <input
+              className="mt-0.5 w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg"
+              type="number"
+              min="0"
+              value={trauma}
+              onChange={(e) => setTrauma(e.target.value)}
+            />
+          </label>
+          <label className="text-[10px] text-gray-500">
+            General beds
+            <input
+              className="mt-0.5 w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg"
+              type="number"
+              min="0"
+              value={general}
+              onChange={(e) => setGeneral(e.target.value)}
+            />
+          </label>
+        </div>
         <p className="text-xs text-gray-400">
           📍 Click the map to pick a location
         </p>
@@ -107,10 +149,15 @@ export default function HospitalPanel({
                 {h.location.latitude.toFixed(4)},{" "}
                 {h.location.longitude.toFixed(4)}
               </p>
-              <p className="text-xs mt-1">
-                <span className={`font-medium tabular-nums ${h.available_beds > 0 ? "text-green-600" : "text-red-500"}`}>
-                  🛏️ {h.available_beds}/{h.total_beds ?? h.available_beds} beds free
-                </span>
+              <p
+                className={`text-xs mt-1 font-medium tabular-nums ${
+                  totalBedsAvailable(h) > 0 ? "text-green-600" : "text-red-500"
+                }`}
+              >
+                🛏️ {totalBedsAvailable(h)} free · Burn{" "}
+                {h.burn_unit_beds_available}/{h.burn_unit_beds_total} · Trauma{" "}
+                {h.trauma_center_beds_available}/{h.trauma_center_beds_total} ·
+                General {h.general_beds_available}/{h.general_beds_total}
               </p>
               {h.doctors.length > 0 && (
                 <p className="text-xs text-gray-500 mt-0.5">

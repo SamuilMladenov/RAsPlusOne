@@ -67,6 +67,24 @@ function patientIcon(triage) {
   `, 28);
 }
 
+/** Patient stays on the map at their scene until pickup (not hidden the moment they are assigned). */
+function showPatientMarkerAtScene(p, ambulances) {
+  if (!p.location) return false;
+  if (!p.ambulance_id) return true;
+  const amb = ambulances.find((a) => a.ambulance_id === p.ambulance_id);
+  if (!amb) return true;
+  return amb.status === "en_route" || amb.status === "at_scene";
+}
+
+function patientPickupPopupNote(p, ambulances) {
+  if (!p.ambulance_id) return "Waiting for pickup";
+  const amb = ambulances.find((a) => a.ambulance_id === p.ambulance_id);
+  if (!amb) return "Waiting for pickup";
+  if (amb.status === "en_route") return "Ambulance en route — remain at scene";
+  if (amb.status === "at_scene") return "Ambulance arrived — boarding";
+  return "";
+}
+
 function clickIcon() {
   return svgIcon(`
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -137,8 +155,8 @@ export default function MapView({
               <p className="text-gray-500">
                 {h.doctors.length} doctor{h.doctors.length !== 1 && "s"}
               </p>
-              <p className={`text-xs font-medium ${h.available_beds > 0 ? "text-green-600" : "text-red-500"}`}>
-                {h.available_beds} bed{h.available_beds !== 1 && "s"} available
+              <p className={`text-xs font-medium ${((h.burn_unit_beds_available ?? 0) + (h.trauma_center_beds_available ?? 0) + (h.general_beds_available ?? 0)) > 0 ? "text-green-600" : "text-red-500"}`}>
+                {((h.burn_unit_beds_available ?? 0) + (h.trauma_center_beds_available ?? 0) + (h.general_beds_available ?? 0))} beds free (burn / trauma / general)
               </p>
               {h.patient_ids.length > 0 && (
                 <p className="text-xs text-violet-600">
@@ -183,7 +201,7 @@ export default function MapView({
       ))}
 
       {patients
-        .filter((p) => p.location && !p.ambulance_id)
+        .filter((p) => showPatientMarkerAtScene(p, ambulances))
         .map((p) => (
           <Marker
             key={`p-${p.patient_id}`}
@@ -196,7 +214,14 @@ export default function MapView({
                 <p className="text-xs uppercase font-medium" style={{ color: TRIAGE_MARKER_COLORS[p.triage_priority] }}>
                   Triage: {p.triage_priority}
                 </p>
-                <p className="text-xs text-gray-400">Waiting for pickup</p>
+                {p.ambulance_id && (
+                  <p className="text-xs text-amber-700 mt-0.5 font-medium">
+                    🚑 {p.ambulance_id}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {patientPickupPopupNote(p, ambulances)}
+                </p>
               </div>
             </Popup>
           </Marker>

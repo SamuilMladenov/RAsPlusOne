@@ -71,29 +71,45 @@ class AmbulanceResponse(BaseModel):
 class HospitalCreate(BaseModel):
     location: Location
     doctors: list[str] = Field(default_factory=list)
-    total_beds: int = Field(default=10, ge=0)
-    available_beds: int = Field(default=10, ge=0)
+    burn_unit_beds_total: int = Field(default=4, ge=0)
+    burn_unit_beds_available: int = Field(default=4, ge=0)
+    trauma_center_beds_total: int = Field(default=4, ge=0)
+    trauma_center_beds_available: int = Field(default=4, ge=0)
+    general_beds_total: int = Field(default=4, ge=0)
+    general_beds_available: int = Field(default=4, ge=0)
 
     @model_validator(mode="after")
-    def total_covers_available(self) -> HospitalCreate:
-        if self.total_beds < self.available_beds:
-            self.total_beds = self.available_beds
+    def totals_cover_available(self) -> HospitalCreate:
+        if self.burn_unit_beds_total < self.burn_unit_beds_available:
+            self.burn_unit_beds_total = self.burn_unit_beds_available
+        if self.trauma_center_beds_total < self.trauma_center_beds_available:
+            self.trauma_center_beds_total = self.trauma_center_beds_available
+        if self.general_beds_total < self.general_beds_available:
+            self.general_beds_total = self.general_beds_available
         return self
 
 
 class HospitalUpdate(BaseModel):
     location: Optional[Location] = None
     doctors: Optional[list[str]] = None
-    total_beds: Optional[int] = None
-    available_beds: Optional[int] = None
+    burn_unit_beds_total: Optional[int] = None
+    burn_unit_beds_available: Optional[int] = None
+    trauma_center_beds_total: Optional[int] = None
+    trauma_center_beds_available: Optional[int] = None
+    general_beds_total: Optional[int] = None
+    general_beds_available: Optional[int] = None
 
 
 class HospitalResponse(BaseModel):
     hospital_id: str
     location: Location
     doctors: list[str]
-    total_beds: int
-    available_beds: int
+    burn_unit_beds_total: int
+    burn_unit_beds_available: int
+    trauma_center_beds_total: int
+    trauma_center_beds_available: int
+    general_beds_total: int
+    general_beds_available: int
     patient_ids: list[str]
 
 

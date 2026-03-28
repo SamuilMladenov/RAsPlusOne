@@ -27,6 +27,14 @@ const STATUS_LABELS = {
   admitted: "Admitted",
 };
 
+/** Matches backend Destination enum values */
+const DESTINATION_OPTIONS = [
+  { value: "", label: "General (default)" },
+  { value: "General Hospital", label: "General Hospital" },
+  { value: "Trauma Center", label: "Trauma Center" },
+  { value: "Burn Unit", label: "Burn Unit" },
+];
+
 export default function PatientPanel({
   patients,
   ambulances,
@@ -35,6 +43,7 @@ export default function PatientPanel({
   toast,
 }) {
   const [triage, setTriage] = useState("green");
+  const [destination, setDestination] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -42,10 +51,12 @@ export default function PatientPanel({
       return toast("Click the map to set the patient location", "error");
     setLoading(true);
     try {
-      const res = await api.createPatient({
+      const payload = {
         location: clickedLocation,
         triage_priority: triage,
-      });
+      };
+      if (destination) payload.destination = destination;
+      const res = await api.createPatient(payload);
       toast(`Patient "${res.patient_id}" created`);
       onRefresh();
     } catch (e) {
@@ -88,8 +99,27 @@ export default function PatientPanel({
             </button>
           ))}
         </div>
+        <div>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">
+            Destination (dispatch sends to a hospital with matching beds)
+          </label>
+          <select
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+          >
+            {DESTINATION_OPTIONS.map((o) => (
+              <option key={o.label} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <p className="text-xs text-gray-400">
-          📍 Click the map to set the patient location
+          📍 Click the map to set the patient location. An available ambulance is
+          assigned automatically (red before yellow before green; closest ambulance
+          first; up to two greens at the same spot with the same destination may
+          share one ambulance).
         </p>
         <button
           onClick={handleCreate}
@@ -135,6 +165,11 @@ export default function PatientPanel({
                       </p>
                     ) : (
                       <p className="text-xs text-orange-500 mt-0.5">Waiting for dispatch</p>
+                    )}
+                    {p.destination && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        → {p.destination}
+                      </p>
                     )}
                   </div>
                 </div>
