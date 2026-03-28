@@ -115,12 +115,6 @@ class HospitalResponse(BaseModel):
 
 # ── Hospital dashboard (incoming ambulances) ─────────────────────────
 
-class IncomingPatientBrief(BaseModel):
-    patient_id: str
-    triage_priority: TriagePriority
-    location: Optional[Location] = None
-
-
 class IncomingAmbulanceItem(BaseModel):
     ambulance_id: str
     status: AmbulanceStatus
@@ -128,13 +122,22 @@ class IncomingAmbulanceItem(BaseModel):
     eta_minutes_to_hospital: Optional[float] = None
     distance_km_remaining: Optional[float] = None
     eta_approximate: bool = False
-    patients: list[IncomingPatientBrief]
+    patients: list[PatientResponse]
     eta_unavailable_reason: Optional[str] = None
+
+
+class DepartmentDashboardItem(BaseModel):
+    destination: Destination
+    label: str
+    beds_total: int
+    beds_available: int
+    patients: list[PatientResponse]
 
 
 class HospitalDashboardResponse(BaseModel):
     hospital: HospitalResponse
     incoming: list[IncomingAmbulanceItem]
+    departments: list[DepartmentDashboardItem]
 
 
 # ── Assignment ───────────────────────────────────────────────────────

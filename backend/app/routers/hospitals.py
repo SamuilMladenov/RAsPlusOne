@@ -12,6 +12,7 @@ from app.schemas import (
     HospitalUpdate,
     IncomingAmbulanceItem,
 )
+from app.services.hospital_dashboard import build_department_dashboard
 from app.services.hospital_incoming import INCOMING_STATUSES, incoming_row_dict
 
 router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
@@ -67,6 +68,7 @@ async def get_hospital_dashboard(hospital_id: str):
     return HospitalDashboardResponse(
         hospital=HospitalResponse.model_validate(hospital.model_dump()),
         incoming=incoming,
+        departments=build_department_dashboard(hospital),
     )
 
 

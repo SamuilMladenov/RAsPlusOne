@@ -7,7 +7,7 @@ import time
 
 from app import database as db
 from app.models import Ambulance, AmbulanceStatus, Hospital, Location
-from app.schemas import IncomingAmbulanceLeg
+from app.schemas import IncomingAmbulanceLeg, PatientResponse
 from app.services.distance import DEFAULT_SPEED_KMH, get_driving_route, haversine_km
 
 INCOMING_STATUSES = frozenset(
@@ -122,14 +122,7 @@ async def incoming_row_dict(ambulance: Ambulance, hospital: Hospital) -> dict:
     for pid in ambulance.patient_ids:
         p = db.patients.get(pid)
         if p:
-            loc = p.location.model_dump() if p.location else None
-            patients.append(
-                {
-                    "patient_id": p.patient_id,
-                    "triage_priority": p.triage_priority,
-                    "location": loc,
-                }
-            )
+            patients.append(PatientResponse.model_validate(p.model_dump()).model_dump())
 
     eta_min, dist_km, eta_err, eta_approx = await compute_eta_minutes_cached(
         ambulance, hospital, leg
