@@ -7,11 +7,12 @@ from app import database as db
 from app.models import (
     AmbulanceStatus,
     Patient,
+    PatientStatus,
     TriageStatus,
     TRIAGE_AMBULANCE_CAPACITY,
 )
 from app.schemas import EmergencyCreate, EmergencyDispatch, EmergencyResponse
-from app.services.distance import find_nearest_hospital_id, get_driving_route_with_fallback
+from app.services.distance import find_hospitals_sorted, get_driving_route_with_fallback
 from app.services.simulation import start_two_leg_travel
 
 router = APIRouter(prefix="/emergencies", tags=["Emergencies"])
@@ -22,17 +23,28 @@ TRIAGE_LEVELS = list(TriageStatus)
 @router.post("/", response_model=EmergencyResponse)
 async def create_emergency(body: EmergencyCreate):
     """Create an emergency: bulk-create patients at a location with random triage,
-    dispatch ambulances to pick them up, then route to nearest hospitals."""
+    dispatch ambulances to pick them up, then route to nearest hospitals.
+
+    All (ambulance, hospital) candidates are ranked. Under the lock each
+    candidate is tried in order — stale ones are skipped instead of failing.
+    """
     if not db.hospitals:
         raise HTTPException(400, "No hospitals registered in the system")
 
+    # Create patients under lock
     patients_by_triage: dict[TriageStatus, list[str]] = {t: [] for t in TriageStatus}
-    for _ in range(body.patient_count):
-        pid = f"EM-{uuid.uuid4().hex[:6].upper()}"
-        triage = random.choice(TRIAGE_LEVELS)
-        patient = Patient(patient_id=pid, triage_status=triage, location=body.location)
-        db.patients[pid] = patient
-        patients_by_triage[triage].append(pid)
+    async with db.lock:
+        for _ in range(body.patient_count):
+            pid = f"EM-{uuid.uuid4().hex[:6].upper()}"
+            triage = random.choice(TRIAGE_LEVELS)
+            patient = Patient(patient_id=pid, triage_status=triage, location=body.location)
+            db.patients[pid] = patient
+            patients_by_triage[triage].append(pid)
+
+    # Pre-compute hospital routes from the emergency location (shared across batches)
+    hospital_routes = await find_hospitals_sorted(
+        body.location, db.hospitals, include_geometry=True
+    )
 
     dispatched: list[EmergencyDispatch] = []
     unassigned: list[str] = []
@@ -55,73 +67,64 @@ async def create_emergency(body: EmergencyCreate):
                 unassigned.extend(batch)
                 continue
 
-            best_amb = None
-            best_pickup_route = None
-            best_hospital_route = None
-            best_hospital_id = None
-
+            # Phase 1: compute pickup routes for all available ambulances (no lock)
+            candidates: list[tuple] = []
             for amb in available:
                 try:
                     pickup_route = await get_driving_route_with_fallback(
                         amb.location, body.location, include_geometry=True
                     )
-                    h_id, hospital_route = await find_nearest_hospital_id(
-                        body.location, db.hospitals, include_geometry=True
-                    )
                 except Exception:
                     continue
-                total = pickup_route.distance_km + hospital_route.distance_km
-                best_total = (
-                    (best_pickup_route.distance_km + best_hospital_route.distance_km)
-                    if best_pickup_route and best_hospital_route
-                    else float("inf")
-                )
-                if total < best_total:
-                    best_amb = amb
-                    best_pickup_route = pickup_route
-                    best_hospital_route = hospital_route
-                    best_hospital_id = h_id
+                for h_id, hospital_route in hospital_routes:
+                    total = pickup_route.distance_km + hospital_route.distance_km
+                    candidates.append((total, amb, pickup_route, h_id, hospital_route))
 
-            if (
-                best_amb is None
-                or best_pickup_route is None
-                or best_hospital_route is None
-                or best_hospital_id is None
-            ):
+            candidates.sort(key=lambda c: c[0])
+
+            if not candidates:
                 unassigned.extend(batch)
                 continue
 
-            hospital = db.hospitals.get(best_hospital_id)
-            if hospital and hospital.available_beds <= 0:
+            # Phase 2: under lock, try candidates in order
+            committed = False
+            async with db.lock:
+                for total_km, amb, pickup_route, h_id, hospital_route in candidates:
+                    if amb.status != AmbulanceStatus.AVAILABLE:
+                        continue
+                    hospital = db.hospitals.get(h_id)
+                    if not hospital or hospital.available_beds <= 0:
+                        continue
+
+                    hospital.available_beds -= 1
+
+                    for pid in batch:
+                        p = db.patients[pid]
+                        p.ambulance_id = amb.ambulance_id
+                        p.status = PatientStatus.IN_TRANSIT
+                        amb.patient_ids.append(pid)
+
+                    amb.hospital_id = h_id
+                    amb.status = AmbulanceStatus.EN_ROUTE
+                    committed = True
+
+                    total_min = pickup_route.duration_minutes + hospital_route.duration_minutes
+
+                    start_two_leg_travel(
+                        amb.ambulance_id, amb,
+                        pickup_route.waypoints, hospital_route.waypoints,
+                    )
+
+                    dispatched.append(EmergencyDispatch(
+                        patient_ids=list(batch),
+                        ambulance_id=amb.ambulance_id,
+                        hospital_id=h_id,
+                        distance_km=round(total_km, 2),
+                        duration_minutes=round(total_min, 2),
+                    ))
+                    break
+
+            if not committed:
                 unassigned.extend(batch)
-                continue
-            if hospital:
-                hospital.available_beds -= 1
-
-            for pid in batch:
-                patient = db.patients[pid]
-                patient.ambulance_id = best_amb.ambulance_id
-                best_amb.patient_ids.append(pid)
-
-            best_amb.hospital_id = best_hospital_id
-            best_amb.status = AmbulanceStatus.EN_ROUTE
-
-            total_km = best_pickup_route.distance_km + best_hospital_route.distance_km
-            total_min = best_pickup_route.duration_minutes + best_hospital_route.duration_minutes
-
-            start_two_leg_travel(
-                best_amb.ambulance_id,
-                best_amb,
-                best_pickup_route.waypoints,
-                best_hospital_route.waypoints,
-            )
-
-            dispatched.append(EmergencyDispatch(
-                patient_ids=list(batch),
-                ambulance_id=best_amb.ambulance_id,
-                hospital_id=best_hospital_id,
-                distance_km=round(total_km, 2),
-                duration_minutes=round(total_min, 2),
-            ))
 
     return EmergencyResponse(dispatched=dispatched, unassigned_patients=unassigned)

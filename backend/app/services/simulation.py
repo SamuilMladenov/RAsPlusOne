@@ -3,7 +3,7 @@
 import asyncio
 import math
 
-from app.models import AmbulanceStatus, Location
+from app.models import AmbulanceStatus, Location, PatientStatus
 
 SPEED_KMH = 60.0
 TICK_SECONDS = 1.0
@@ -27,23 +27,25 @@ def _interpolate(a: Location, b: Location, fraction: float) -> Location:
     )
 
 
-def _on_arrival(ambulance_id: str, ambulance):
+async def _on_arrival(ambulance_id: str, ambulance):
     """Transfer patients from ambulance to hospital, then free the ambulance."""
     from app import database as db
 
-    hospital = db.hospitals.get(ambulance.hospital_id) if ambulance.hospital_id else None
+    async with db.lock:
+        hospital = db.hospitals.get(ambulance.hospital_id) if ambulance.hospital_id else None
 
-    for pid in ambulance.patient_ids:
-        patient = db.patients.get(pid)
-        if patient:
-            patient.ambulance_id = None
-            patient.location = None
-        if hospital and pid not in hospital.patient_ids:
-            hospital.patient_ids.append(pid)
+        for pid in ambulance.patient_ids:
+            patient = db.patients.get(pid)
+            if patient:
+                patient.ambulance_id = None
+                patient.location = None
+                patient.status = PatientStatus.ADMITTED
+            if hospital and pid not in hospital.patient_ids:
+                hospital.patient_ids.append(pid)
 
-    ambulance.patient_ids.clear()
-    ambulance.hospital_id = None
-    ambulance.status = AmbulanceStatus.AVAILABLE
+        ambulance.patient_ids.clear()
+        ambulance.hospital_id = None
+        ambulance.status = AmbulanceStatus.AVAILABLE
 
 
 async def _travel_leg(ambulance_id: str, ambulance, waypoints: list[Location]):
@@ -106,7 +108,7 @@ async def _run_two_leg_travel(
         if not await _travel_leg(ambulance_id, ambulance, hospital_waypoints):
             return
 
-        _on_arrival(ambulance_id, ambulance)
+        await _on_arrival(ambulance_id, ambulance)
     finally:
         _active_tasks.pop(ambulance_id, None)
 
@@ -119,7 +121,7 @@ async def _run_single_leg_travel(ambulance_id: str, ambulance, waypoints: list[L
         if not await _travel_leg(ambulance_id, ambulance, waypoints):
             return
 
-        _on_arrival(ambulance_id, ambulance)
+        await _on_arrival(ambulance_id, ambulance)
     finally:
         _active_tasks.pop(ambulance_id, None)
 

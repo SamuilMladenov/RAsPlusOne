@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from enum import Enum
 
-from app.models import AmbulanceStatus, Location, TriageStatus
+from app.models import AmbulanceStatus, Location, PatientStatus, TriageStatus
 
 
 class IncomingAmbulanceLeg(str, Enum):
@@ -26,6 +26,7 @@ class PatientResponse(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
     triage_status: TriageStatus
+    status: PatientStatus
     location: Optional[Location] = None
 
 

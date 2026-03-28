@@ -13,6 +13,18 @@ const TRIAGE_DOT = {
   green: "bg-green-500",
 };
 
+const STATUS_STYLES = {
+  waiting: "bg-orange-100 text-orange-700",
+  in_transit: "bg-blue-100 text-blue-700",
+  admitted: "bg-violet-100 text-violet-700",
+};
+
+const STATUS_LABELS = {
+  waiting: "Waiting",
+  in_transit: "In transit",
+  admitted: "Admitted",
+};
+
 export default function PatientPanel({
   patients,
   ambulances,
@@ -22,7 +34,6 @@ export default function PatientPanel({
 }) {
   const [triage, setTriage] = useState("green");
   const [loading, setLoading] = useState(false);
-  const [dispatching, setDispatching] = useState(null);
 
   const handleCreate = async () => {
     if (!clickedLocation)
@@ -39,21 +50,6 @@ export default function PatientPanel({
       toast(e.message, "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDispatch = async (pid) => {
-    setDispatching(pid);
-    try {
-      const res = await api.dispatchPatient(pid);
-      toast(
-        `Dispatched! ${res.ambulance_id} → ${res.hospital_id} (${res.distance_km} km, ~${res.duration_minutes} min)`,
-      );
-      onRefresh();
-    } catch (e) {
-      toast(e.message, "error");
-    } finally {
-      setDispatching(null);
     }
   };
 
@@ -126,13 +122,17 @@ export default function PatientPanel({
                     <p className="text-sm font-medium text-gray-800">
                       {p.patient_id}
                     </p>
-                    {p.ambulance_id ? (
-                      <p className="text-xs text-green-600 mt-0.5">
+                    {p.status === "admitted" ? (
+                      <p className="text-xs text-violet-600 mt-0.5">
+                        🏥 Admitted
+                      </p>
+                    ) : p.ambulance_id ? (
+                      <p className="text-xs text-blue-600 mt-0.5">
                         🚑 {p.ambulance_id}
                         {amb?.hospital_id && ` → ${amb.hospital_id}`}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-400 mt-0.5">Unassigned</p>
+                      <p className="text-xs text-orange-500 mt-0.5">Waiting for dispatch</p>
                     )}
                   </div>
                 </div>
@@ -152,16 +152,12 @@ export default function PatientPanel({
                 </div>
               </div>
 
-              {!p.ambulance_id && (
-                <button
-                  onClick={() => handleDispatch(p.patient_id)}
-                  disabled={dispatching === p.patient_id}
-                  className="w-full py-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors disabled:opacity-50"
+              {p.status && (
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase ${STATUS_STYLES[p.status] || "bg-gray-100 text-gray-600"}`}
                 >
-                  {dispatching === p.patient_id
-                    ? "Dispatching…"
-                    : "⚡ Auto-Dispatch"}
-                </button>
+                  {STATUS_LABELS[p.status] || p.status}
+                </span>
               )}
             </div>
           );

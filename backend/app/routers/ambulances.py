@@ -10,20 +10,10 @@ from app.schemas import (
     AmbulanceUpdate,
     AssignHospitalResponse,
 )
-from app.services.distance import find_nearest_hospital_id
+from app.services.distance import find_hospitals_sorted
 from app.services.simulation import cancel_travel, start_travel
 
 router = APIRouter(prefix="/ambulances", tags=["Ambulances"])
-
-
-def _reserve_bed(hospital_id: str):
-    """Reserve one bed at the hospital for this ambulance assignment."""
-    hospital = db.hospitals.get(hospital_id)
-    if not hospital:
-        return
-    if hospital.available_beds <= 0:
-        raise HTTPException(400, f"Hospital '{hospital_id}' has no available beds")
-    hospital.available_beds -= 1
 
 
 @router.post("/", response_model=AmbulanceResponse, status_code=201)
@@ -33,7 +23,8 @@ async def create_ambulance(body: AmbulanceCreate):
         ambulance_id=ambulance_id,
         location=body.location,
     )
-    db.ambulances[ambulance_id] = ambulance
+    async with db.lock:
+        db.ambulances[ambulance_id] = ambulance
     return ambulance
 
 
@@ -52,22 +43,24 @@ async def get_ambulance(ambulance_id: str):
 
 @router.patch("/{ambulance_id}", response_model=AmbulanceResponse)
 async def update_ambulance(ambulance_id: str, body: AmbulanceUpdate):
-    ambulance = db.ambulances.get(ambulance_id)
-    if not ambulance:
-        raise HTTPException(404, "Ambulance not found")
-    if body.location is not None:
-        ambulance.location = body.location
-    if body.status is not None:
-        ambulance.status = body.status
+    async with db.lock:
+        ambulance = db.ambulances.get(ambulance_id)
+        if not ambulance:
+            raise HTTPException(404, "Ambulance not found")
+        if body.location is not None:
+            ambulance.location = body.location
+        if body.status is not None:
+            ambulance.status = body.status
     return ambulance
 
 
 @router.delete("/{ambulance_id}", status_code=204)
 async def delete_ambulance(ambulance_id: str):
-    if ambulance_id not in db.ambulances:
-        raise HTTPException(404, "Ambulance not found")
-    cancel_travel(ambulance_id)
-    del db.ambulances[ambulance_id]
+    async with db.lock:
+        if ambulance_id not in db.ambulances:
+            raise HTTPException(404, "Ambulance not found")
+        cancel_travel(ambulance_id)
+        del db.ambulances[ambulance_id]
 
 
 @router.post(
@@ -75,24 +68,25 @@ async def delete_ambulance(ambulance_id: str):
     response_model=AmbulanceResponse,
 )
 async def assign_patient_to_ambulance(ambulance_id: str, patient_id: str):
-    ambulance = db.ambulances.get(ambulance_id)
-    if not ambulance:
-        raise HTTPException(404, "Ambulance not found")
-    patient = db.patients.get(patient_id)
-    if not patient:
-        raise HTTPException(404, "Patient not found")
-    if patient.ambulance_id and patient.ambulance_id != ambulance_id:
-        raise HTTPException(
-            409,
-            f"Patient already assigned to ambulance '{patient.ambulance_id}'",
-        )
+    async with db.lock:
+        ambulance = db.ambulances.get(ambulance_id)
+        if not ambulance:
+            raise HTTPException(404, "Ambulance not found")
+        patient = db.patients.get(patient_id)
+        if not patient:
+            raise HTTPException(404, "Patient not found")
+        if patient.ambulance_id and patient.ambulance_id != ambulance_id:
+            raise HTTPException(
+                409,
+                f"Patient already assigned to ambulance '{patient.ambulance_id}'",
+            )
 
-    if patient_id not in ambulance.patient_ids:
-        ambulance.patient_ids.append(patient_id)
-    patient.ambulance_id = ambulance_id
+        if patient_id not in ambulance.patient_ids:
+            ambulance.patient_ids.append(patient_id)
+        patient.ambulance_id = ambulance_id
 
-    if ambulance.status == AmbulanceStatus.AVAILABLE:
-        ambulance.status = AmbulanceStatus.EN_ROUTE
+        if ambulance.status == AmbulanceStatus.AVAILABLE:
+            ambulance.status = AmbulanceStatus.EN_ROUTE
 
     return ambulance
 
@@ -102,15 +96,20 @@ async def assign_patient_to_ambulance(ambulance_id: str, patient_id: str):
     response_model=AssignHospitalResponse,
 )
 async def assign_nearest_hospital(ambulance_id: str):
-    """Find the nearest hospital by road distance, reserve beds, and start travel simulation."""
+    """Find the nearest hospital by road distance, reserve beds, and start travel simulation.
+
+    All hospitals are ranked by distance. Under the lock, each is tried in
+    order — if one became full, the next nearest is used instead of failing.
+    """
     ambulance = db.ambulances.get(ambulance_id)
     if not ambulance:
         raise HTTPException(404, "Ambulance not found")
     if not db.hospitals:
         raise HTTPException(400, "No hospitals registered in the system")
 
+    # Compute routes to all hospitals (outside lock)
     try:
-        hospital_id, route = await find_nearest_hospital_id(
+        ranked = await find_hospitals_sorted(
             ambulance.location, db.hospitals, include_geometry=True
         )
     except ValueError as exc:
@@ -118,18 +117,30 @@ async def assign_nearest_hospital(ambulance_id: str):
     except Exception as exc:
         raise HTTPException(502, f"Distance service error: {exc}") from exc
 
-    _reserve_bed(hospital_id)
-    ambulance.hospital_id = hospital_id
-    ambulance.status = AmbulanceStatus.EN_ROUTE
+    if not ranked:
+        raise HTTPException(400, "No hospitals with available beds")
 
-    if route.waypoints:
-        start_travel(ambulance_id, ambulance, route.waypoints)
-    else:
-        ambulance.status = AmbulanceStatus.AT_HOSPITAL
+    # Under lock, try each hospital in order
+    async with db.lock:
+        for hospital_id, route in ranked:
+            hospital = db.hospitals.get(hospital_id)
+            if not hospital or hospital.available_beds <= 0:
+                continue
 
-    return AssignHospitalResponse(
-        ambulance_id=ambulance_id,
-        hospital_id=hospital_id,
-        distance_km=route.distance_km,
-        duration_minutes=route.duration_minutes,
-    )
+            hospital.available_beds -= 1
+            ambulance.hospital_id = hospital_id
+            ambulance.status = AmbulanceStatus.EN_ROUTE
+
+            if route.waypoints:
+                start_travel(ambulance_id, ambulance, route.waypoints)
+            else:
+                ambulance.status = AmbulanceStatus.AT_HOSPITAL
+
+            return AssignHospitalResponse(
+                ambulance_id=ambulance_id,
+                hospital_id=hospital_id,
+                distance_km=route.distance_km,
+                duration_minutes=route.duration_minutes,
+            )
+
+        raise HTTPException(400, "All hospitals are full")

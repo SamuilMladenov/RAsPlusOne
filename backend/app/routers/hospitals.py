@@ -27,7 +27,8 @@ async def create_hospital(body: HospitalCreate):
         total_beds=body.total_beds,
         available_beds=body.available_beds,
     )
-    db.hospitals[hospital_id] = hospital
+    async with db.lock:
+        db.hospitals[hospital_id] = hospital
     return hospital
 
 
@@ -75,24 +76,26 @@ async def get_hospital(hospital_id: str):
 
 @router.patch("/{hospital_id}", response_model=HospitalResponse)
 async def update_hospital(hospital_id: str, body: HospitalUpdate):
-    hospital = db.hospitals.get(hospital_id)
-    if not hospital:
-        raise HTTPException(404, "Hospital not found")
-    if body.location is not None:
-        hospital.location = body.location
-    if body.doctors is not None:
-        hospital.doctors = body.doctors
-    if body.total_beds is not None:
-        hospital.total_beds = body.total_beds
-    if body.available_beds is not None:
-        hospital.available_beds = body.available_beds
-    if hospital.total_beds < hospital.available_beds:
-        hospital.total_beds = hospital.available_beds
+    async with db.lock:
+        hospital = db.hospitals.get(hospital_id)
+        if not hospital:
+            raise HTTPException(404, "Hospital not found")
+        if body.location is not None:
+            hospital.location = body.location
+        if body.doctors is not None:
+            hospital.doctors = body.doctors
+        if body.total_beds is not None:
+            hospital.total_beds = body.total_beds
+        if body.available_beds is not None:
+            hospital.available_beds = body.available_beds
+        if hospital.total_beds < hospital.available_beds:
+            hospital.total_beds = hospital.available_beds
     return hospital
 
 
 @router.delete("/{hospital_id}", status_code=204)
 async def delete_hospital(hospital_id: str):
-    if hospital_id not in db.hospitals:
-        raise HTTPException(404, "Hospital not found")
-    del db.hospitals[hospital_id]
+    async with db.lock:
+        if hospital_id not in db.hospitals:
+            raise HTTPException(404, "Hospital not found")
+        del db.hospitals[hospital_id]

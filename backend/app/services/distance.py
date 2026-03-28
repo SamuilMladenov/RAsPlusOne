@@ -110,6 +110,29 @@ async def get_driving_distance(origin: Location, destination: Location) -> Route
     return await get_driving_route(origin, destination, include_geometry=False)
 
 
+async def find_hospitals_sorted(
+    origin: Location,
+    hospital_map: dict,
+    *,
+    include_geometry: bool = False,
+) -> list[tuple[str, RouteResult]]:
+    """Return all hospitals with available beds, sorted by road distance (nearest first)."""
+    if not hospital_map:
+        raise ValueError("No hospitals registered")
+
+    results: list[tuple[str, RouteResult]] = []
+    for h_id, hospital in hospital_map.items():
+        if hospital.available_beds <= 0:
+            continue
+        route = await get_driving_route_with_fallback(
+            origin, hospital.location, include_geometry=include_geometry
+        )
+        results.append((h_id, route))
+
+    results.sort(key=lambda x: x[1].distance_km)
+    return results
+
+
 async def find_nearest_hospital_id(
     origin: Location,
     hospital_map: dict,
@@ -117,23 +140,9 @@ async def find_nearest_hospital_id(
     include_geometry: bool = False,
 ) -> tuple[str, RouteResult]:
     """Return (hospital_id, RouteResult) for the closest hospital by road."""
-    if not hospital_map:
-        raise ValueError("No hospitals registered")
-
-    best_id: str | None = None
-    best_route: RouteResult | None = None
-
-    for h_id, hospital in hospital_map.items():
-        if hospital.available_beds <= 0:
-            continue
-        route = await get_driving_route_with_fallback(
-            origin, hospital.location, include_geometry=include_geometry
-        )
-        if best_route is None or route.distance_km < best_route.distance_km:
-            best_id = h_id
-            best_route = route
-
-    if best_id is None or best_route is None:
+    results = await find_hospitals_sorted(
+        origin, hospital_map, include_geometry=include_geometry
+    )
+    if not results:
         raise ValueError("No hospitals with available beds")
-
-    return best_id, best_route
+    return results[0]

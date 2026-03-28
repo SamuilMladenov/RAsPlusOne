@@ -33,10 +33,17 @@ class AmbulanceStatus(str, Enum):
     OUT_OF_SERVICE = "out_of_service"
 
 
+class PatientStatus(str, Enum):
+    WAITING = "waiting"
+    IN_TRANSIT = "in_transit"
+    ADMITTED = "admitted"
+
+
 class Patient(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
     triage_status: TriageStatus = TriageStatus.GREEN
+    status: PatientStatus = PatientStatus.WAITING
     location: Optional[Location] = None
 
 
