@@ -1,26 +1,18 @@
-import random
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import database as db
 from app.deps import require_admin
-from app.models import AmbulanceStatus, Destination, Patient, TriagePriority
+from app.models import AmbulanceStatus, Patient, TriagePriority
 from app.schemas import EmergencyCreate, EmergencyDispatch, EmergencyResponse
+from app.realtime import notify_patients_changed
 from app.services.dispatch_queue import emergency_batches_for_triage, try_dispatch_batch
 
 router = APIRouter(
     prefix="/emergencies",
     tags=["Emergencies"],
     dependencies=[Depends(require_admin)],
-)
-
-TRIAGE_LEVELS = [TriagePriority.RED, TriagePriority.YELLOW, TriagePriority.GREEN]
-
-_EMERGENCY_DESTINATIONS = (
-    Destination.BURN_UNIT,
-    Destination.TRAUMA_CENTER,
-    Destination.GENERAL_HOSPITAL,
 )
 
 
@@ -30,24 +22,26 @@ async def create_emergency(body: EmergencyCreate):
 
     Red/yellow: one patient per ambulance. Green: up to two per ambulance if they share
     destination and location. Closest available ambulance to the scene is chosen first.
+    Clinical fields are supplied by the client (e.g. randomized in the UI).
     """
     if not db.hospitals:
         raise HTTPException(400, "No hospitals registered in the system")
 
     patients_by_triage: dict[TriagePriority, list[str]] = {t: [] for t in TriagePriority}
     async with db.lock:
-        for _ in range(body.patient_count):
+        for spec in body.patients:
             pid = f"EM-{uuid.uuid4().hex[:6].upper()}"
-            triage = random.choice(TRIAGE_LEVELS)
-            dest = random.choice(_EMERGENCY_DESTINATIONS)
             patient = Patient(
                 patient_id=pid,
-                triage_priority=triage,
+                triage_priority=spec.triage_priority,
                 location=body.location,
-                destination=dest,
+                destination=spec.destination,
+                respiration=spec.respiration,
+                perfusion=spec.perfusion,
+                mental_status=spec.mental_status,
             )
             db.patients[pid] = patient
-            patients_by_triage[triage].append(pid)
+            patients_by_triage[spec.triage_priority].append(pid)
 
     dispatched: list[EmergencyDispatch] = []
     unassigned: list[str] = []
@@ -98,4 +92,5 @@ async def create_emergency(body: EmergencyCreate):
             else:
                 unassigned.extend(batch)
 
+    await notify_patients_changed()
     return EmergencyResponse(dispatched=dispatched, unassigned_patients=unassigned)

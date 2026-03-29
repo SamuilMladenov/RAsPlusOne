@@ -5,7 +5,7 @@ import app.config  # noqa: F401 — load .env before auth accounts
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import ambulances, auth, emergencies, hospitals, patients
+from app.routers import ambulances, auth, emergencies, hospitals, patients, ws
 from app.seed import seed_on_startup_if_configured
 
 
@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="RAs+1 — Ambulance Dispatch System",
+    title="TriageFlow — Ambulance Dispatch System",
     description=(
         "Manage ambulances, patients and hospitals. "
         "Patients are assigned to ambulances which are routed to the "
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(ws.router)
 app.include_router(patients.router)
 app.include_router(ambulances.router)
 app.include_router(hospitals.router)

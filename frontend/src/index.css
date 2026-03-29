@@ -28,11 +28,11 @@ body {
   background: transparent;
 }
 .sidebar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #b8e8f0;
   border-radius: 3px;
 }
 .sidebar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #4bc6d3;
 }
 
 /* Pulse animation for ambulances en-route */

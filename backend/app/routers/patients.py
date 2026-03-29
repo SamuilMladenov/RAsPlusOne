@@ -10,6 +10,7 @@ from app.schemas import (
     PatientCreate,
     PatientResponse,
 )
+from app.realtime import notify_patients_changed
 from app.services.dispatch_queue import (
     describe_bed_needs_for_ids,
     process_waiting_dispatch_queue,
@@ -37,6 +38,7 @@ async def create_patient(body: PatientCreate):
     async with db.lock:
         db.patients[patient_id] = patient
     await process_waiting_dispatch_queue()
+    await notify_patients_changed()
     return patient
 
 
@@ -64,6 +66,7 @@ async def delete_patient(patient_id: str):
             if amb and patient_id in amb.patient_ids:
                 amb.patient_ids.remove(patient_id)
         del db.patients[patient_id]
+    await notify_patients_changed()
 
 
 @router.post("/{patient_id}/dispatch", response_model=DispatchResponse)
@@ -101,6 +104,7 @@ async def dispatch_patient(patient_id: str):
     if not amb or not amb.hospital_id:
         raise HTTPException(500, "Inconsistent ambulance state after dispatch")
 
+    await notify_patients_changed()
     return DispatchResponse(
         patient_id=patient_id,
         ambulance_id=patient.ambulance_id,

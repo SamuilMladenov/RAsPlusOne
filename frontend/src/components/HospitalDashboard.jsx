@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import * as api from "../api";
+import BrandLogo from "./BrandLogo";
 
 const LEG_LABELS = {
   to_patient: "Heading to patient",
@@ -210,7 +211,34 @@ export default function HospitalDashboard() {
     );
   }
 
-  const { hospital, incoming, departments = [] } = data;
+  if (!data.hospital) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 px-4">
+        <p className="text-gray-700 text-center">Invalid dashboard response</p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          {user?.role === "admin" && (
+            <Link
+              to="/"
+              className="text-primary-600 font-medium text-sm hover:underline"
+            >
+              Back to dispatch
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={logout}
+            className="text-gray-600 font-medium text-sm hover:underline"
+          >
+            Log out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const hospital = data.hospital;
+  const incoming = Array.isArray(data.incoming) ? data.incoming : [];
+  const departments = Array.isArray(data.departments) ? data.departments : [];
   const totalAvail =
     (hospital.burn_unit_beds_available ?? 0) +
     (hospital.trauma_center_beds_available ?? 0) +
@@ -221,13 +249,16 @@ export default function HospitalDashboard() {
     (hospital.general_beds_total ?? 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">{hospital.hospital_id}</h1>
+    <div className="min-h-screen bg-slate-50 text-gray-900">
+      <header className="bg-white border-b border-primary-100 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <BrandLogo size="compact" className="shrink-0 hidden sm:block max-w-[140px]" />
+          <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-primary-900">{hospital.hospital_id}</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             Incoming ambulances · ETA refreshes about every minute (road, or straight-line if routing is busy)
           </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span
@@ -262,8 +293,8 @@ export default function HospitalDashboard() {
         </div>
       </header>
 
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+      <div className="bg-white border-b border-primary-100 px-6 py-4">
+        <p className="text-xs font-semibold text-primary-800/70 uppercase tracking-wide mb-3">
           Free beds by department
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -452,9 +483,13 @@ export default function HospitalDashboard() {
                     <div>
                       <p className="font-semibold text-gray-800">{row.ambulance_id}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {LEG_LABELS[row.leg] || row.leg}
+                        {LEG_LABELS[row.leg] ?? row.leg ?? "—"}
                         <span className="text-gray-400"> · </span>
-                        <span className="capitalize">{row.status.replace(/_/g, " ")}</span>
+                        <span className="capitalize">
+                          {String(row.status ?? "")
+                            .replace(/_/g, " ")
+                            .trim() || "—"}
+                        </span>
                       </p>
                     </div>
                     <div className="text-right">

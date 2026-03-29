@@ -1,5 +1,6 @@
 import { useState } from "react";
 import * as api from "../api";
+import { randomEmergencyPatient } from "../patientFieldOptions";
 
 export default function EmergencyPanel({
   clickedLocation,
@@ -31,9 +32,10 @@ export default function EmergencyPanel({
 
     setLoading(true);
     try {
+      const patients = Array.from({ length: n }, () => randomEmergencyPatient());
       const res = await api.createEmergency({
         location: clickedLocation,
-        patient_count: n,
+        patients,
       });
       const d = res.dispatched.length;
       const u = res.unassigned_patients.length;
@@ -59,11 +61,12 @@ export default function EmergencyPanel({
         </div>
 
         <p className="text-xs text-red-600">
-          Creates patients at the scene with random triage and destination. Dispatch
-          order is red, then yellow, then green; red and yellow travel one per
-          ambulance, green up to two per ambulance when destination and location
-          match. The nearest available ambulance to the scene is chosen first.
-          Hospitals must have matching free beds.
+          Builds each patient in the browser with random triage, destination, and
+          START vitals, then sends them to the server. Dispatch order is red, then
+          yellow, then green; red and yellow travel one per ambulance, green up to
+          two per ambulance when destination and location match. The nearest
+          available ambulance to the scene is chosen first. Hospitals must have
+          matching free beds.
         </p>
 
         <div>
@@ -111,7 +114,7 @@ export default function EmergencyPanel({
           </p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-3 text-center">
-          <p className="text-2xl font-bold text-blue-600">{totalBeds}</p>
+          <p className="text-2xl font-bold text-primary-600">{totalBeds}</p>
           <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">
             Beds available
           </p>

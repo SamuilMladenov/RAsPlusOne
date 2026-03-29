@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from enum import Enum
 
@@ -34,8 +34,17 @@ class PatientCreate(BaseModel):
     mental_status: Optional[MentalStatus] = None
     destination: Optional[Destination] = None
 
+    @field_validator("respiration", "perfusion", "mental_status", "destination", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: object) -> object:
+        if v == "":
+            return None
+        return v
+
 
 class PatientResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     patient_id: str
     ambulance_id: Optional[str] = None
     triage_priority: TriagePriority
@@ -101,6 +110,8 @@ class HospitalUpdate(BaseModel):
 
 
 class HospitalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     hospital_id: str
     location: Location
     doctors: list[str]
@@ -159,9 +170,17 @@ class DispatchResponse(BaseModel):
 
 # ── Emergency ────────────────────────────────────────────────────────
 
+class EmergencyPatientInput(BaseModel):
+    triage_priority: TriagePriority
+    destination: Destination
+    respiration: Respiration
+    perfusion: Perfusion
+    mental_status: MentalStatus
+
+
 class EmergencyCreate(BaseModel):
     location: Location
-    patient_count: int = Field(..., ge=1)
+    patients: list[EmergencyPatientInput] = Field(..., min_length=1)
 
 
 class EmergencyDispatch(BaseModel):

@@ -118,11 +118,11 @@ async def compute_eta_minutes_cached(
 
 async def incoming_row_dict(ambulance: Ambulance, hospital: Hospital) -> dict:
     leg = leg_for_status(ambulance.status)
-    patients = []
+    patients: list[PatientResponse] = []
     for pid in ambulance.patient_ids:
         p = db.patients.get(pid)
         if p:
-            patients.append(PatientResponse.model_validate(p.model_dump()).model_dump())
+            patients.append(PatientResponse.model_validate(p))
 
     eta_min, dist_km, eta_err, eta_approx = await compute_eta_minutes_cached(
         ambulance, hospital, leg

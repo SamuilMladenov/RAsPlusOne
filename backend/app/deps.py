@@ -35,10 +35,8 @@ def create_access_token(account: Account) -> str:
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> TokenUser:
-    token = credentials.credentials
+def parse_access_token(token: str) -> TokenUser | None:
+    """Decode a bearer token; return None if invalid or expired."""
     try:
         data = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         return TokenUser(
@@ -47,7 +45,17 @@ async def get_current_user(
             hospital_id=data.get("hospital_id"),
         )
     except JWTError:
+        return None
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> TokenUser:
+    token = credentials.credentials
+    user = parse_access_token(token)
+    if user is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return user
 
 
 CurrentUser = Annotated[TokenUser, Depends(get_current_user)]
@@ -75,6 +83,7 @@ __all__ = [
     "CurrentUser",
     "AdminUser",
     "get_current_user",
+    "parse_access_token",
     "require_admin",
     "create_access_token",
     "ensure_hospital_access",

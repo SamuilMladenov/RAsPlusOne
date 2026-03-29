@@ -68,7 +68,7 @@ async def get_hospital_dashboard(hospital_id: str, user: CurrentUser):
     )
 
     return HospitalDashboardResponse(
-        hospital=HospitalResponse.model_validate(hospital.model_dump()),
+        hospital=HospitalResponse.model_validate(hospital),
         incoming=incoming,
         departments=build_department_dashboard(hospital),
     )

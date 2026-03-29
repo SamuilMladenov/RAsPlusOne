@@ -12,7 +12,7 @@ from app.services.hospital_beds import hospital_can_fulfill, hospital_total_avai
 OSRM_BASE = "https://router.project-osrm.org"
 
 # Match simulation travel speed when OSRM is unavailable (straight-line fallback).
-DEFAULT_SPEED_KMH = 60.0
+DEFAULT_SPEED_KMH = 150.0
 
 
 def haversine_km(a: Location, b: Location) -> float:

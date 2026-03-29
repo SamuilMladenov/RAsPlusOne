@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import * as api from "../api";
+import BrandLogo from "./BrandLogo";
 
 export default function Login() {
   const { login, isAuthenticated, user } = useAuth();
@@ -43,42 +44,42 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white/95 shadow-2xl border border-white/20 p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            RAs+1 Dispatch
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to continue</p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-primary-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-primary-100 p-8">
+        <div className="text-center mb-8 space-y-3">
+          <div className="flex justify-center">
+            <BrandLogo size="large" className="mx-auto" />
+          </div>
+          <p className="text-sm text-gray-500">Sign in to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+            <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
               {error}
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-primary-800 mb-1">
               Email
             </label>
             <input
               type="email"
               autoComplete="username"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-400 focus:border-primary-500 outline-none transition-shadow"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-primary-800 mb-1">
               Password
             </label>
             <input
               type="password"
               autoComplete="current-password"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-400 focus:border-primary-500 outline-none transition-shadow"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -87,17 +88,11 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+            className="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 shadow-sm"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
-
-        <p className="text-[10px] text-gray-400 text-center mt-6 leading-relaxed">
-          Demo accounts are configured in <code className="bg-gray-100 px-1 rounded">backend/.env</code>
-          <br />
-          Admin: full map and dispatch · Hospital: dashboard only
-        </p>
       </div>
     </div>
   );

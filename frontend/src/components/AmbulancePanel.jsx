@@ -6,7 +6,7 @@ const STATUS_COLORS = {
   en_route: "bg-amber-100 text-amber-700",
   at_scene: "bg-red-100 text-red-700",
   transporting: "bg-violet-100 text-violet-700",
-  at_hospital: "bg-blue-100 text-blue-700",
+  at_hospital: "bg-primary-100 text-primary-800",
   out_of_service: "bg-gray-100 text-gray-600",
 };
 
@@ -130,7 +130,7 @@ export default function AmbulancePanel({
             </div>
 
             {a.hospital_id && (
-              <p className="text-xs text-blue-500">
+              <p className="text-xs text-primary-500">
                 → Hospital: {a.hospital_id}
               </p>
             )}
@@ -145,7 +145,7 @@ export default function AmbulancePanel({
               <button
                 onClick={() => handleAssignHospital(a.ambulance_id)}
                 disabled={assigningHospital === a.ambulance_id}
-                className="flex-1 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors disabled:opacity-50"
+                className="flex-1 py-1.5 text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors disabled:opacity-50"
               >
                 {assigningHospital === a.ambulance_id
                   ? "Finding…"

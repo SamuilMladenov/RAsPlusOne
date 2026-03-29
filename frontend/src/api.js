@@ -81,3 +81,19 @@ export const dispatchPatient = (id) =>
 // ── Emergencies ────────────────────────────────────────────────────
 export const createEmergency = (data) =>
   request("/emergencies/", { method: "POST", body: JSON.stringify(data) });
+
+/** WebSocket URL for admin realtime events (`/ws`). Same host as HTTP API (Vite proxies `/ws` in dev). */
+export function getEventsWebSocketUrl(token) {
+  if (!token) return null;
+  const q = `token=${encodeURIComponent(token)}`;
+  if (apiOrigin) {
+    const u = new URL(apiOrigin);
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    u.pathname = "/ws";
+    u.search = q;
+    return u.toString();
+  }
+  if (typeof window === "undefined") return null;
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}/ws?${q}`;
+}

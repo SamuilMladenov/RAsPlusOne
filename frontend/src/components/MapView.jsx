@@ -233,7 +233,7 @@ export default function MapView({
           icon={clickIcon()}
         >
           <Popup>
-            <span className="text-xs text-indigo-600 font-medium">
+            <span className="text-xs text-primary-600 font-medium">
               Selected: {clickedLocation.latitude.toFixed(4)},{" "}
               {clickedLocation.longitude.toFixed(4)}
             </span>

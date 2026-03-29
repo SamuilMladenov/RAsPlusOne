@@ -1,5 +1,6 @@
 import { useState } from "react";
 import * as api from "../api";
+import { randomClinicalFields } from "../patientFieldOptions";
 
 const TRIAGE_STYLES = {
   red: "bg-red-100 text-red-700 border-red-200",
@@ -17,7 +18,7 @@ const TRIAGE_DOT = {
 
 const STATUS_STYLES = {
   waiting: "bg-orange-100 text-orange-700",
-  in_transit: "bg-blue-100 text-blue-700",
+  in_transit: "bg-primary-100 text-primary-800",
   admitted: "bg-violet-100 text-violet-700",
 };
 
@@ -51,11 +52,15 @@ export default function PatientPanel({
       return toast("Click the map to set the patient location", "error");
     setLoading(true);
     try {
+      const clinical = randomClinicalFields();
       const payload = {
         location: clickedLocation,
         triage_priority: triage,
+        respiration: clinical.respiration,
+        perfusion: clinical.perfusion,
+        mental_status: clinical.mental_status,
+        destination: destination || clinical.destination,
       };
-      if (destination) payload.destination = destination;
       const res = await api.createPatient(payload);
       toast(`Patient "${res.patient_id}" created`);
       onRefresh();
@@ -116,15 +121,17 @@ export default function PatientPanel({
           </select>
         </div>
         <p className="text-xs text-gray-400">
-          📍 Click the map to set the patient location. An available ambulance is
-          assigned automatically (red before yellow before green; closest ambulance
-          first; up to two greens at the same spot with the same destination may
-          share one ambulance).
+          📍 Click the map to set the patient location. Each click generates random
+          respiration, perfusion, and mental status in the browser; use the
+          destination dropdown to fix a destination, or leave “General (default)”
+          for a random one. An available ambulance is assigned automatically (red
+          before yellow before green; closest ambulance first; up to two greens at
+          the same spot with the same destination may share one ambulance).
         </p>
         <button
           onClick={handleCreate}
           disabled={loading}
-          className="w-full py-2 text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors disabled:opacity-50"
+          className="w-full py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-colors disabled:opacity-50"
         >
           {loading ? "Creating…" : "Create Patient"}
         </button>
@@ -159,7 +166,7 @@ export default function PatientPanel({
                         🏥 Admitted
                       </p>
                     ) : p.ambulance_id ? (
-                      <p className="text-xs text-blue-600 mt-0.5">
+                      <p className="text-xs text-primary-600 mt-0.5">
                         🚑 {p.ambulance_id}
                         {amb?.hospital_id && ` → ${amb.hospital_id}`}
                       </p>
@@ -169,6 +176,14 @@ export default function PatientPanel({
                     {p.destination && (
                       <p className="text-xs text-gray-500 mt-0.5">
                         → {p.destination}
+                      </p>
+                    )}
+                    {(p.respiration || p.perfusion || p.mental_status) && (
+                      <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed border-t border-gray-100 pt-1.5">
+                        <span className="font-medium text-gray-500">START:</span>{" "}
+                        {[p.respiration, p.perfusion, p.mental_status]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     )}
                   </div>

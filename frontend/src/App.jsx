@@ -4,6 +4,41 @@ import MapView from "./components/MapView";
 import Sidebar from "./components/Sidebar";
 import * as api from "./api";
 
+function usePatientsRealtime(refresh, token, isAdmin) {
+  useEffect(() => {
+    if (!token || !isAdmin) return;
+    let ws = null;
+    let reconnectTimer = null;
+    let cancelled = false;
+
+    const connect = () => {
+      if (cancelled) return;
+      const url = api.getEventsWebSocketUrl(token);
+      if (!url) return;
+      ws = new WebSocket(url);
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === "patients_updated") refresh();
+        } catch {
+          /* ignore */
+        }
+      };
+      ws.onclose = () => {
+        if (cancelled) return;
+        reconnectTimer = window.setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+    return () => {
+      cancelled = true;
+      if (reconnectTimer != null) window.clearTimeout(reconnectTimer);
+      if (ws != null && ws.readyState === WebSocket.OPEN) ws.close();
+    };
+  }, [token, isAdmin, refresh]);
+}
+
 function ToastContainer({ toasts, dismiss }) {
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
@@ -11,10 +46,10 @@ function ToastContainer({ toasts, dismiss }) {
         <div
           key={t.id}
           onClick={() => dismiss(t.id)}
-          className={`px-4 py-3 rounded-lg shadow-lg text-sm cursor-pointer transition-all animate-slide-in ${
+          className={`px-4 py-3 rounded-xl shadow-lg text-sm cursor-pointer transition-all animate-slide-in ${
             t.type === "error"
               ? "bg-red-600 text-white"
-              : "bg-gray-900 text-white"
+              : "bg-primary-800 text-white"
           }`}
         >
           {t.message}
@@ -25,7 +60,7 @@ function ToastContainer({ toasts, dismiss }) {
 }
 
 export default function App() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const [hospitals, setHospitals] = useState([]);
   const [ambulances, setAmbulances] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -62,6 +97,8 @@ export default function App() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  usePatientsRealtime(refresh, token, user?.role === "admin");
 
   // Auto-poll while any ambulance is actively travelling (3s to reduce API load vs 1s)
   useEffect(() => {
