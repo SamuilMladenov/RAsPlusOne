@@ -5,6 +5,7 @@ import { AuthProvider } from "./AuthContext";
 import App from "./App";
 import HospitalDashboard from "./components/HospitalDashboard";
 import Login from "./components/Login";
+import TriagePage from "./components/TriagePage";
 import { HospitalAccessGate, ProtectedRoute } from "./components/ProtectedRoute";
 import "./index.css";
 
@@ -14,6 +15,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/triage"
+            element={
+              <ProtectedRoute triagerOnly>
+                <TriagePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/"
             element={

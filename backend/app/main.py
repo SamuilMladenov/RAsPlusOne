@@ -5,7 +5,7 @@ import app.config  # noqa: F401 — load .env before auth accounts
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import ambulances, auth, emergencies, hospitals, patients, ws
+from app.routers import ambulances, auth, emergencies, hospitals, patients, triage, ws
 from app.seed import seed_on_startup_if_configured
 
 
@@ -39,6 +39,7 @@ app.include_router(patients.router)
 app.include_router(ambulances.router)
 app.include_router(hospitals.router)
 app.include_router(emergencies.router)
+app.include_router(triage.router)
 
 
 @app.get("/", tags=["Health"])

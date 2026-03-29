@@ -7,7 +7,7 @@ from typing import Literal
 
 from app.config import _get
 
-Role = Literal["admin", "hospital"]
+Role = Literal["admin", "hospital", "triager"]
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,16 @@ def _load_accounts() -> dict[str, Account]:
     if admin_email and admin_password:
         e = admin_email.lower()
         accounts[e] = Account(email=admin_email, password=admin_password, role="admin")
+
+    triager_email = _get("AUTH_TRIAGER_EMAIL")
+    triager_password = _get("AUTH_TRIAGER_PASSWORD")
+    if triager_email and triager_password:
+        e = triager_email.lower()
+        accounts[e] = Account(
+            email=triager_email,
+            password=triager_password,
+            role="triager",
+        )
 
     for i in range(1, 10):
         prefix = f"AUTH_HOSPITAL_{i}_"
