@@ -211,34 +211,7 @@ export default function HospitalDashboard() {
     );
   }
 
-  if (!data.hospital) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 px-4">
-        <p className="text-gray-700 text-center">Invalid dashboard response</p>
-        <div className="flex flex-wrap gap-3 justify-center">
-          {user?.role === "admin" && (
-            <Link
-              to="/"
-              className="text-primary-600 font-medium text-sm hover:underline"
-            >
-              Back to dispatch
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={logout}
-            className="text-gray-600 font-medium text-sm hover:underline"
-          >
-            Log out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const hospital = data.hospital;
-  const incoming = Array.isArray(data.incoming) ? data.incoming : [];
-  const departments = Array.isArray(data.departments) ? data.departments : [];
+  const { hospital, incoming, departments = [] } = data;
   const totalAvail =
     (hospital.burn_unit_beds_available ?? 0) +
     (hospital.trauma_center_beds_available ?? 0) +
@@ -483,13 +456,9 @@ export default function HospitalDashboard() {
                     <div>
                       <p className="font-semibold text-gray-800">{row.ambulance_id}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {LEG_LABELS[row.leg] ?? row.leg ?? "—"}
+                        {LEG_LABELS[row.leg] || row.leg}
                         <span className="text-gray-400"> · </span>
-                        <span className="capitalize">
-                          {String(row.status ?? "")
-                            .replace(/_/g, " ")
-                            .trim() || "—"}
-                        </span>
+                        <span className="capitalize">{row.status.replace(/_/g, " ")}</span>
                       </p>
                     </div>
                     <div className="text-right">

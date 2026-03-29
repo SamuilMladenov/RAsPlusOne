@@ -26,9 +26,4 @@ Thumbs.db
 # Environment
 .env
 .env.*
-
-# Data
-models/data/images
-
-# ENV
 !backend/auth.env.example

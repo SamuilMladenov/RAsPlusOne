@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from enum import Enum
 
@@ -43,8 +43,6 @@ class PatientCreate(BaseModel):
 
 
 class PatientResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     patient_id: str
     ambulance_id: Optional[str] = None
     triage_priority: TriagePriority
@@ -110,8 +108,6 @@ class HospitalUpdate(BaseModel):
 
 
 class HospitalResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     hospital_id: str
     location: Location
     doctors: list[str]

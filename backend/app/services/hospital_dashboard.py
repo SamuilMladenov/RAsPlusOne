@@ -33,7 +33,7 @@ def build_department_dashboard(hospital) -> list[DepartmentDashboardItem]:
                 continue
             if effective_destination(p) != dest:
                 continue
-            pts.append(PatientResponse.model_validate(p))
+            pts.append(PatientResponse.model_validate(p.model_dump()))
         pts.sort(key=lambda x: x.patient_id)
         rows.append(
             DepartmentDashboardItem(
