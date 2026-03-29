@@ -47,6 +47,10 @@ async def _on_arrival(ambulance_id: str, ambulance):
         ambulance.hospital_id = None
         ambulance.status = AmbulanceStatus.AVAILABLE
 
+    from app.services.dispatch_queue import process_waiting_dispatch_queue
+
+    asyncio.create_task(process_waiting_dispatch_queue())
+
 
 async def _travel_leg(ambulance_id: str, ambulance, waypoints: list[Location]):
     """Move the ambulance along a single set of waypoints. Returns True if completed."""

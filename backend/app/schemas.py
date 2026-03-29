@@ -6,7 +6,16 @@ from pydantic import BaseModel, Field, model_validator
 
 from enum import Enum
 
-from app.models import AmbulanceStatus, Location, PatientStatus, TriageStatus
+from app.models import (
+    AmbulanceStatus,
+    Destination,
+    Location,
+    MentalStatus,
+    PatientStatus,
+    Perfusion,
+    Respiration,
+    TriagePriority,
+)
 
 
 class IncomingAmbulanceLeg(str, Enum):
@@ -19,13 +28,21 @@ class IncomingAmbulanceLeg(str, Enum):
 
 class PatientCreate(BaseModel):
     location: Location
-    triage_status: TriageStatus = TriageStatus.GREEN
+    triage_priority: TriagePriority = TriagePriority.GREEN
+    respiration: Optional[Respiration] = None
+    perfusion: Optional[Perfusion] = None
+    mental_status: Optional[MentalStatus] = None
+    destination: Optional[Destination] = None
 
 
 class PatientResponse(BaseModel):
     patient_id: str
     ambulance_id: Optional[str] = None
-    triage_status: TriageStatus
+    triage_priority: TriagePriority
+    respiration: Optional[Respiration] = None
+    perfusion: Optional[Perfusion] = None
+    mental_status: Optional[MentalStatus] = None
+    destination: Optional[Destination] = None
     status: PatientStatus
     location: Optional[Location] = None
 
@@ -54,41 +71,49 @@ class AmbulanceResponse(BaseModel):
 class HospitalCreate(BaseModel):
     location: Location
     doctors: list[str] = Field(default_factory=list)
-    total_beds: int = Field(default=10, ge=0)
-    available_beds: int = Field(default=10, ge=0)
+    burn_unit_beds_total: int = Field(default=4, ge=0)
+    burn_unit_beds_available: int = Field(default=4, ge=0)
+    trauma_center_beds_total: int = Field(default=4, ge=0)
+    trauma_center_beds_available: int = Field(default=4, ge=0)
+    general_beds_total: int = Field(default=4, ge=0)
+    general_beds_available: int = Field(default=4, ge=0)
 
     @model_validator(mode="after")
-    def total_covers_available(self) -> HospitalCreate:
-        if self.total_beds < self.available_beds:
-            self.total_beds = self.available_beds
+    def totals_cover_available(self) -> HospitalCreate:
+        if self.burn_unit_beds_total < self.burn_unit_beds_available:
+            self.burn_unit_beds_total = self.burn_unit_beds_available
+        if self.trauma_center_beds_total < self.trauma_center_beds_available:
+            self.trauma_center_beds_total = self.trauma_center_beds_available
+        if self.general_beds_total < self.general_beds_available:
+            self.general_beds_total = self.general_beds_available
         return self
 
 
 class HospitalUpdate(BaseModel):
     location: Optional[Location] = None
     doctors: Optional[list[str]] = None
-    total_beds: Optional[int] = None
-    available_beds: Optional[int] = None
+    burn_unit_beds_total: Optional[int] = Field(default=None, ge=0)
+    burn_unit_beds_available: Optional[int] = Field(default=None, ge=0)
+    trauma_center_beds_total: Optional[int] = Field(default=None, ge=0)
+    trauma_center_beds_available: Optional[int] = Field(default=None, ge=0)
+    general_beds_total: Optional[int] = Field(default=None, ge=0)
+    general_beds_available: Optional[int] = Field(default=None, ge=0)
 
 
 class HospitalResponse(BaseModel):
     hospital_id: str
     location: Location
     doctors: list[str]
-    total_beds: int
-    available_beds: int
+    burn_unit_beds_total: int
+    burn_unit_beds_available: int
+    trauma_center_beds_total: int
+    trauma_center_beds_available: int
+    general_beds_total: int
+    general_beds_available: int
     patient_ids: list[str]
 
 
 # ── Hospital dashboard (incoming ambulances) ─────────────────────────
-
-class IncomingPatientBrief(BaseModel):
-    """Per-patient row for incoming ambulances. Extend later with name, chief_complaint, etc."""
-
-    patient_id: str
-    triage_status: TriageStatus
-    location: Optional[Location] = None
-
 
 class IncomingAmbulanceItem(BaseModel):
     ambulance_id: str
@@ -97,13 +122,22 @@ class IncomingAmbulanceItem(BaseModel):
     eta_minutes_to_hospital: Optional[float] = None
     distance_km_remaining: Optional[float] = None
     eta_approximate: bool = False
-    patients: list[IncomingPatientBrief]
+    patients: list[PatientResponse]
     eta_unavailable_reason: Optional[str] = None
+
+
+class DepartmentDashboardItem(BaseModel):
+    destination: Destination
+    label: str
+    beds_total: int
+    beds_available: int
+    patients: list[PatientResponse]
 
 
 class HospitalDashboardResponse(BaseModel):
     hospital: HospitalResponse
     incoming: list[IncomingAmbulanceItem]
+    departments: list[DepartmentDashboardItem]
 
 
 # ── Assignment ───────────────────────────────────────────────────────

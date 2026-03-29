@@ -5,7 +5,9 @@ import math
 import httpx
 import polyline as polyline_codec
 
-from app.models import Location
+from app.models import Destination, Location
+
+from app.services.hospital_beds import hospital_can_fulfill, hospital_total_available
 
 OSRM_BASE = "https://router.project-osrm.org"
 
@@ -115,14 +117,20 @@ async def find_hospitals_sorted(
     hospital_map: dict,
     *,
     include_geometry: bool = False,
+    bed_needs: dict[Destination, int] | None = None,
 ) -> list[tuple[str, RouteResult]]:
-    """Return all hospitals with available beds, sorted by road distance (nearest first)."""
+    """Return hospitals that can satisfy bed needs (or any free bed if needs is None),
+    sorted by road distance from origin (nearest first).
+    """
     if not hospital_map:
         raise ValueError("No hospitals registered")
 
     results: list[tuple[str, RouteResult]] = []
     for h_id, hospital in hospital_map.items():
-        if hospital.available_beds <= 0:
+        if bed_needs is not None:
+            if not hospital_can_fulfill(hospital, bed_needs):
+                continue
+        elif hospital_total_available(hospital) <= 0:
             continue
         route = await get_driving_route_with_fallback(
             origin, hospital.location, include_geometry=include_geometry

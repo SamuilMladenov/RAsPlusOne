@@ -28,3 +28,6 @@ Thumbs.db
 
 # Data
 models/data/images
+
+# ENV
+!backend/auth.env.example

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 import MapView from "./components/MapView";
 import Sidebar from "./components/Sidebar";
 import * as api from "./api";
@@ -24,6 +25,7 @@ function ToastContainer({ toasts, dismiss }) {
 }
 
 export default function App() {
+  const { user, logout } = useAuth();
   const [hospitals, setHospitals] = useState([]);
   const [ambulances, setAmbulances] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -70,7 +72,7 @@ export default function App() {
         a.status === "at_scene",
     );
     if (!hasMoving) return;
-    const id = setInterval(refresh, 3000);
+    const id = setInterval(refresh, 1000);
     return () => clearInterval(id);
   }, [ambulances, refresh]);
 
@@ -83,6 +85,8 @@ export default function App() {
         clickedLocation={clickedLocation}
         onRefresh={refresh}
         toast={toast}
+        user={user}
+        onLogout={logout}
       />
       <div className="flex-1 relative">
         <MapView

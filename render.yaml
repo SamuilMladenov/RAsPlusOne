@@ -1,0 +1,63 @@
+# Render Blueprint: https://docs.render.com/docs/blueprint-spec
+# Dashboard → New → Blueprint → connect this repo (or push `render.yaml` and sync).
+#
+# Deploys the FastAPI API and a static Vite build. `VITE_API_URL` is wired to the API URL.
+# After deploy, open the static site URL. Demo logins match AUTH_* below — change in the dashboard.
+# In-memory data resets when the API restarts or redeploys.
+
+version: "1"
+
+services:
+  - type: web
+    name: ras-backend
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SEED_DEMO_DATA
+        value: "1"
+      - key: AUTH_ADMIN_EMAIL
+        value: admin@rasplusone.local
+      - key: AUTH_ADMIN_PASSWORD
+        value: AdminDemo2024!
+      - key: AUTH_HOSPITAL_1_EMAIL
+        value: stanna@h-seed01.local
+      - key: AUTH_HOSPITAL_1_PASSWORD
+        value: HospitalSeed01!
+      - key: AUTH_HOSPITAL_1_HOSPITAL_ID
+        value: H-SEED01
+      - key: AUTH_HOSPITAL_2_EMAIL
+        value: central@h-seed02.local
+      - key: AUTH_HOSPITAL_2_PASSWORD
+        value: HospitalSeed02!
+      - key: AUTH_HOSPITAL_2_HOSPITAL_ID
+        value: H-SEED02
+      - key: AUTH_HOSPITAL_3_EMAIL
+        value: academic@h-seed03.local
+      - key: AUTH_HOSPITAL_3_PASSWORD
+        value: HospitalSeed03!
+      - key: AUTH_HOSPITAL_3_HOSPITAL_ID
+        value: H-SEED03
+
+  - type: web
+    name: ras-frontend
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: ras-backend
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
