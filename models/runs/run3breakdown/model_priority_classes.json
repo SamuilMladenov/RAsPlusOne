@@ -1,0 +1,15 @@
+{
+  "section": "priority",
+  "classes": [
+    "PRIORITY_RED",
+    "PRIORITY_YELLOW",
+    "PRIORITY_GREEN",
+    "PRIORITY_BLACK"
+  ],
+  "class_to_idx": {
+    "PRIORITY_RED": 0,
+    "PRIORITY_YELLOW": 1,
+    "PRIORITY_GREEN": 2,
+    "PRIORITY_BLACK": 3
+  }
+}

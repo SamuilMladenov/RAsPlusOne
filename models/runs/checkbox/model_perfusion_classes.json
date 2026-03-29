@@ -1,0 +1,15 @@
+{
+  "section": "perfusion",
+  "classes": [
+    "PERF_NO_RADIAL",
+    "PERF_CAPILLARY_LESS_2",
+    "PERF_CAPILLARY_MORE_2",
+    "PERF_SEVERE_BLEEDING"
+  ],
+  "class_to_idx": {
+    "PERF_NO_RADIAL": 0,
+    "PERF_CAPILLARY_LESS_2": 1,
+    "PERF_CAPILLARY_MORE_2": 2,
+    "PERF_SEVERE_BLEEDING": 3
+  }
+}

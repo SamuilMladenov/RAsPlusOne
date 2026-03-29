@@ -1,0 +1,13 @@
+{
+  "section": "destination",
+  "classes": [
+    "DEST_TRAUMA_CENTER",
+    "DEST_GENERAL_HOSPITAL",
+    "DEST_BURN_UNIT"
+  ],
+  "class_to_idx": {
+    "DEST_TRAUMA_CENTER": 0,
+    "DEST_GENERAL_HOSPITAL": 1,
+    "DEST_BURN_UNIT": 2
+  }
+}

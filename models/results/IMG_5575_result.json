@@ -1,0 +1,93 @@
+{
+  "image": "input_photos/IMG_5575.JPG",
+  "id": null,
+  "priority": "PRIORITY_BLACK",
+  "respiration": "RESP_LESS_10",
+  "perfusion": null,
+  "mental_status": "MENTAL_ALERT",
+  "destination": "DEST_BURN_UNIT",
+  "raw_detections": {
+    "ID_FIELD": null,
+    "PRIORITY_RED": {
+      "state": "ticked",
+      "state_conf": 0.943
+    },
+    "PRIORITY_YELLOW": {
+      "state": "unticked",
+      "state_conf": 1.0
+    },
+    "PRIORITY_GREEN": {
+      "state": "ticked",
+      "state_conf": 0.98
+    },
+    "PRIORITY_BLACK": {
+      "state": "unticked",
+      "state_conf": 1.0
+    },
+    "RESP_NOT_BREATHING": {
+      "state": "unticked",
+      "state_conf": 0.999
+    },
+    "RESP_LESS_10": {
+      "state": "unticked",
+      "state_conf": 0.98
+    },
+    "RESP_10_30": {
+      "state": "unticked",
+      "state_conf": 0.999
+    },
+    "RESP_MORE_30": {
+      "state": "ticked",
+      "state_conf": 1.0
+    },
+    "PERF_RADIAL_PRESENT": {
+      "state": "unticked",
+      "state_conf": 1.0
+    },
+    "PERF_NO_RADIAL": {
+      "state": "unticked",
+      "state_conf": 1.0
+    },
+    "PERF_CAPILLARY_LESS_2": {
+      "state": "unticked",
+      "state_conf": 0.999
+    },
+    "PERF_CAPILLARY_MORE_2": {
+      "state": "unticked",
+      "state_conf": 0.999
+    },
+    "PERF_SEVERE_BLEEDING": {
+      "state": "unticked",
+      "state_conf": 0.999
+    },
+    "MENTAL_ALERT": {
+      "state": "unticked",
+      "state_conf": 0.999
+    },
+    "MENTAL_UNRESPONSIVE": {
+      "state": "ticked",
+      "state_conf": 1.0
+    },
+    "MENTAL_CANNOT_FOLLOW": {
+      "state": "unticked",
+      "state_conf": 0.546
+    },
+    "DEST_TRAUMA_CENTER": {
+      "state": "unticked",
+      "state_conf": 0.799
+    },
+    "DEST_GENERAL_HOSPITAL": {
+      "state": "ticked",
+      "state_conf": 1.0
+    },
+    "DEST_BURN_UNIT": {
+      "state": "ticked",
+      "state_conf": 0.966
+    },
+    "DEST_OTHER": {
+      "state": "ticked",
+      "state_conf": 0.965
+    }
+  },
+  "processing_time_ms": 944
+}
