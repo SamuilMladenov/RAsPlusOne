@@ -27,6 +27,10 @@ services:
         value: admin@rasplusone.local
       - key: AUTH_ADMIN_PASSWORD
         value: AdminDemo2024!
+      - key: AUTH_TRIAGER_EMAIL
+        value: triager@rasplusone.local
+      - key: AUTH_TRIAGER_PASSWORD
+        value: TriagerDemo2024!
       - key: AUTH_HOSPITAL_1_EMAIL
         value: stanna@h-seed01.local
       - key: AUTH_HOSPITAL_1_PASSWORD

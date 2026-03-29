@@ -15,7 +15,7 @@ from app.auth_accounts import Account
 
 security = HTTPBearer()
 
-Role = Literal["admin", "hospital"]
+Role = Literal["admin", "hospital", "triager"]
 
 
 class TokenUser(BaseModel):
@@ -70,6 +70,15 @@ async def require_admin(user: TokenUser = Depends(get_current_user)) -> TokenUse
 AdminUser = Annotated[TokenUser, Depends(require_admin)]
 
 
+async def require_triager(user: TokenUser = Depends(get_current_user)) -> TokenUser:
+    if user.role != "triager":
+        raise HTTPException(status_code=403, detail="Triager access required")
+    return user
+
+
+TriagerUser = Annotated[TokenUser, Depends(require_triager)]
+
+
 def ensure_hospital_access(user: TokenUser, hospital_id: str) -> None:
     if user.role == "admin":
         return
@@ -82,9 +91,11 @@ __all__ = [
     "TokenUser",
     "CurrentUser",
     "AdminUser",
+    "TriagerUser",
     "get_current_user",
     "parse_access_token",
     "require_admin",
+    "require_triager",
     "create_access_token",
     "ensure_hospital_access",
 ]

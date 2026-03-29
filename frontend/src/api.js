@@ -43,6 +43,32 @@ export async function login(email, password) {
 
 export const getMe = () => request("/auth/me");
 
+/** Multipart upload for triage card photos (triager role). */
+export async function uploadTriagePhoto(file) {
+  const t = localStorage.getItem("auth_token");
+  const headers = {};
+  if (t) headers.Authorization = `Bearer ${t}`;
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(`${BASE}/triage/photos`, {
+    method: "POST",
+    headers,
+    body,
+  });
+  if (res.status === 401) {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+  }
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.detail || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ── Hospitals ──────────────────────────────────────────────────────
 export const getHospitals = () => request("/hospitals/");
 export const getHospitalDashboard = (hospitalId) =>

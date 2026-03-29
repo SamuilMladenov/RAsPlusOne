@@ -17,7 +17,9 @@ export default function Login() {
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
-    if (user.role === "hospital" && user.hospitalId) {
+    if (user.role === "triager") {
+      navigate("/triage", { replace: true });
+    } else if (user.role === "hospital" && user.hospitalId) {
       navigate(`/hospital/${user.hospitalId}`, { replace: true });
     } else {
       navigate(from && from !== "/login" ? from : "/", { replace: true });
@@ -31,7 +33,9 @@ export default function Login() {
     try {
       const data = await api.login(email.trim(), password);
       login(data);
-      if (data.role === "hospital" && data.hospital_id) {
+      if (data.role === "triager") {
+        navigate("/triage", { replace: true });
+      } else if (data.role === "hospital" && data.hospital_id) {
         navigate(`/hospital/${data.hospital_id}`, { replace: true });
       } else {
         navigate(from && from !== "/login" ? from : "/", { replace: true });
