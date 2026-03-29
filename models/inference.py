@@ -18,14 +18,14 @@ Usage:
 
     # Single image
     python inference.py \
-        --image      ./input_photos/photo.jpg \
-        --models_dir ./runs/run3breakdown \
+        --image      ./input_photos/{photo names}.jpg \
+        --models_dir ./runs/checkbox \
         --output_dir ./results
 
     # Batch — all images in a folder
     python inference.py \
-        --image_dir  ./new_cards \
-        --models_dir ./runs/run3breakdown \
+        --image_dir  ./input_photos \
+        --models_dir ./runs/checkbox \
         --output_dir ./results
 """
 
@@ -239,7 +239,11 @@ def run_inference(image_path, models, ocr_reader, device):
     result["raw_detections"]["ID_FIELD"] = result["id"]
 
     # ── Step 2: Run checkbox models ──
-    # Track ticked labels per section for mutual exclusivity
+    # Minimum confidence Model A must have to consider a box ticked.
+    # Raising this reduces false positives at the cost of missing faint ticks.
+    STATE_THRESHOLD = 0.70
+
+    # Track candidates per section for mutual exclusivity enforcement
     section_ticked = {s: [] for s in SECTIONS}
 
     for label, (x, y, w, h) in REGION_MAP.items():
@@ -253,7 +257,8 @@ def run_inference(image_path, models, ocr_reader, device):
             crop, models["model_a"], models["classes_a"], device
         )
 
-        if state == "ticked":
+        # Only proceed if Model A is confident enough
+        if state == "ticked" and state_conf >= STATE_THRESHOLD:
             section = LABEL_TO_SECTION.get(label)
             if section and f"model_{section}" in models:
                 # Section model — which specific label?
@@ -263,17 +268,20 @@ def run_inference(image_path, models, ocr_reader, device):
                     models[f"classes_{section}"],
                     device
                 )
+                # Combined score: both models must agree strongly
+                combined_score = state_conf * label_conf
                 section_ticked[section].append({
-                    "label":      pred_label,
-                    "confidence": label_conf,
-                    "state_conf": state_conf,
+                    "label":         pred_label,
+                    "confidence":    label_conf,
+                    "state_conf":    state_conf,
+                    "combined_score":combined_score,
                 })
             else:
-                # No section model — use the region label directly
                 section_ticked[section].append({
-                    "label":      label,
-                    "confidence": state_conf,
-                    "state_conf": state_conf,
+                    "label":         label,
+                    "confidence":    state_conf,
+                    "state_conf":    state_conf,
+                    "combined_score":state_conf,
                 })
 
         result["raw_detections"][label] = {
@@ -281,7 +289,9 @@ def run_inference(image_path, models, ocr_reader, device):
             "state_conf": round(state_conf, 3),
         }
 
-    # ── Step 3: Pick winner per section (highest confidence ticked) ──
+    # ── Step 3: Enforce mutual exclusivity — one winner per section ──
+    # Pick the candidate with the highest combined score.
+    # This guarantees e.g. only one priority color is ever returned.
     section_to_result_key = {
         "priority":     "priority",
         "respiration":  "respiration",
@@ -292,8 +302,8 @@ def run_inference(image_path, models, ocr_reader, device):
 
     for section, ticked_list in section_ticked.items():
         if ticked_list:
-            # Pick the one with highest label confidence
-            winner = max(ticked_list, key=lambda x: x["confidence"])
+            # Hard guarantee: exactly one winner per section
+            winner = max(ticked_list, key=lambda x: x["combined_score"])
             result[section_to_result_key[section]] = winner["label"]
 
     result["processing_time_ms"] = round((time.time() - t0) * 1000)

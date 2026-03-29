@@ -1,0 +1,15 @@
+{
+  "section": "respiration",
+  "classes": [
+    "RESP_NOT_BREATHING",
+    "RESP_LESS_10",
+    "RESP_10_30",
+    "RESP_MORE_30"
+  ],
+  "class_to_idx": {
+    "RESP_NOT_BREATHING": 0,
+    "RESP_LESS_10": 1,
+    "RESP_10_30": 2,
+    "RESP_MORE_30": 3
+  }
+}

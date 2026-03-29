@@ -1,0 +1,13 @@
+{
+  "section": "mental_status",
+  "classes": [
+    "MENTAL_ALERT",
+    "MENTAL_CANNOT_FOLLOW",
+    "MENTAL_UNRESPONSIVE"
+  ],
+  "class_to_idx": {
+    "MENTAL_ALERT": 0,
+    "MENTAL_CANNOT_FOLLOW": 1,
+    "MENTAL_UNRESPONSIVE": 2
+  }
+}

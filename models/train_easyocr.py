@@ -9,7 +9,7 @@ Evaluates on all three splits and prints per-sample results.
 Usage:
     pip install easyocr
 
-    python ocr_easyocr.py \
+    python train_easyocr.py \
         --data_dir   ./dataset/id_field \
         --output_dir ./runs/ocr_easy
 """
